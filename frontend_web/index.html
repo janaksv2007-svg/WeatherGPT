@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WeatherGPT — Chennai Risk & Alerts & AI Chat</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-icon">⛈️</span>
+    <span class="brand-text">WeatherGPT</span>
+  </div>
+  <div class="header-actions">
+    <select id="locationSelect" class="location-select" aria-label="Select location"><option value="chennai">📍 Chennai</option><option value="pallikaranai">📍 Pallikaranai</option></select>
+    <span id="lastUpdated" class="last-updated">Live</span>
+    <button id="notifBtn" class="notif-btn" title="Enable alert notifications">🔔 Enable Alerts</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- HOME -->
+  <section id="tab-home" class="tab-panel active">
+    <div class="hero-card">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">LIVE WEATHER CENTER</div>
+          <h1>Chennai &amp; Pallikaranai</h1>
+          <p class="hero-sub">Weather, radar, lightning, satellite, news &amp; safety in one place</p>
+        </div>
+        <div id="heroWeatherIcon" class="hero-weather-icon">☁️</div>
+      </div>
+      <div class="hero-weather-row">
+        <div>
+          <div id="heroTemp" class="hero-temp">--°</div>
+          <div id="heroCondition" class="hero-condition">Loading weather…</div>
+        </div>
+        <div class="hero-stats">
+          <span>💧 <b id="heroHumidity">--</b>%</span>
+          <span>💨 <b id="heroWind">--</b> km/h</span>
+          <span>🌧️ <b id="heroRain">--</b>%</span>
+        </div>
+      </div>
+      <div class="hero-bottom"><div id="riskBadge" class="risk-badge risk-unknown">Checking conditions…</div><button class="hero-settings" data-goto="tab-settings">⚙ Settings</button></div>
+    </div>
+
+    <div class="section-title-row">
+      <div><h2>Weather at a glance</h2><p class="hint">Simple live information for your area</p></div>
+      <button class="text-btn" data-goto="tab-weather">View all →</button>
+    </div>
+
+    <div class="card-grid">
+      <div class="mini-card" data-goto="tab-chat">
+        <div class="mini-icon">🤖</div>
+        <div class="mini-title">AI Assistant</div>
+        <div class="mini-sub">Ask WeatherGPT Chatbot</div>
+      </div>
+      <div class="mini-card" data-goto="tab-radar">
+        <div class="mini-icon">🌦️</div>
+        <div class="mini-title">Windy Radar</div>
+        <div class="mini-sub">Live rain &amp; wind map</div>
+      </div>
+      <div class="mini-card" data-goto="tab-lightning">
+        <div class="mini-icon">⚡</div>
+        <div class="mini-title">Lightning</div>
+        <div class="mini-sub">Thunderstorm activity</div>
+      </div>
+      <div class="mini-card" data-goto="tab-alerts">
+        <div class="mini-icon">🚨</div>
+        <div class="mini-title">Alerts</div>
+        <div class="mini-sub">Official warnings</div>
+      </div>
+    </div>
+
+    <div class="health-row">
+      <div class="health-card"><span>🌬️</span><div><small>Air quality</small><b id="homeAQI">--</b><em id="homeAQILabel">Loading</em></div></div>
+      <div class="health-card"><span>☀️</span><div><small>UV now</small><b id="homeUV">--</b><em id="homeUVLabel">Loading</em></div></div>
+    </div>
+
+    <div class="quick-grid">
+      <button class="quick-action" data-goto="tab-chat">🤖<span>AI Chatbot</span><small>Ask about weather</small></button>
+      <button class="quick-action" data-goto="tab-precautions">🛡️<span>Precautions</span><small>What to do now</small></button>
+      <button class="quick-action" data-goto="tab-weather">🌤️<span>Forecast</span><small>Next hours &amp; days</small></button>
+      <button class="quick-action" data-goto="tab-news">📰<span>News &amp; Alerts</span><small>Live updates</small></button>
+    </div>
+
+    <div id="latestAlertStrip" class="alert-strip hidden"></div>
+  </section>
+
+  <!-- AI CHATBOT TAB -->
+  <section id="tab-chat" class="tab-panel">
+    <div class="section-title-row">
+      <div><h2>WeatherGPT AI Chatbot</h2><p class="hint">Ask about storms, rain, temperature, risk scores or What-If scenarios</p></div>
+      <button id="clearChatBtn" class="text-btn">🗑️ Clear Chat</button>
+    </div>
+    <div class="chat-container">
+      <div id="chatMessages" class="chat-messages">
+        <div class="chat-bubble ai">
+          <div class="chat-avatar">🤖</div>
+          <div class="chat-text">
+            <strong>Hi! I'm WeatherGPT AI 👋</strong><br>
+            Ask me anything about current weather, rain forecasts, storm risk scores, What-If scenarios, or weather comparisons.
+          </div>
+        </div>
+      </div>
+      <div class="chip-scroll">
+        <button class="chat-chip" data-ask="Will it rain in Chennai tomorrow?">🌧️ Rain tomorrow?</button>
+        <button class="chat-chip" data-ask="What is the current storm risk score in Chennai?">⚡ Risk score?</button>
+        <button class="chat-chip" data-ask="What if rainfall increases to 100 mm in Chennai?">🌊 What if rainfall = 100mm?</button>
+        <button class="chat-chip" data-ask="Compare weather between Chennai and Bangalore">⚖️ Compare cities</button>
+        <button class="chat-chip" data-ask="Is Chennai weather dangerous today and what precautions to take?">🛡️ Safety advice?</button>
+        <button class="chat-chip" data-ask="Describe Chennai weather in a short poem">📜 Weather poem</button>
+      </div>
+      <form id="chatForm" class="chat-input-row">
+        <input id="chatInput" type="text" placeholder="Ask WeatherGPT AI..." required autocomplete="off">
+        <button type="submit" class="chat-send-btn">Send ➔</button>
+      </form>
+    </div>
+  </section>
+
+
+  <!-- WEATHER -->
+  <section id="tab-weather" class="tab-panel">
+    <h2>Weather Dashboard</h2>
+    <p class="hint">Current conditions and a simple 24-hour outlook</p>
+    <div class="weather-main-card">
+      <div class="weather-big">
+        <span id="weatherIcon">☁️</span>
+        <div><strong id="weatherTemp">--°C</strong><span id="weatherLabel">Loading…</span></div>
+      </div>
+      <div class="weather-metrics">
+        <div><span>💧</span><b id="weatherHumidity">--%</b><small>Humidity</small></div>
+        <div><span>💨</span><b id="weatherWind">-- km/h</b><small>Wind</small></div>
+        <div><span>🌧️</span><b id="weatherPrecip">--%</b><small>Rain chance</small></div>
+        <div><span>☀️</span><b id="weatherUV">--</b><small>UV index</small></div>
+      </div>
+    </div>
+    <div class="air-card"><div><span>🌬️</span><div><b>Air quality</b><small id="aqiText">Checking local air quality…</small></div></div><strong id="aqiValue">--</strong></div>
+    <div class="forecast-scroll" id="hourlyForecast"></div>
+    <div class="forecast-grid" id="dailyForecast"></div>
+  </section>
+
+  <!-- WINDY RADAR -->
+  <section id="tab-radar" class="tab-panel">
+    <div class="section-title-row">
+      <div><h2>Windy Radar</h2><p class="hint">Live interactive weather map</p></div>
+      <a class="external-btn" href="https://www.windy.com/13.083/80.271" target="_blank" rel="noopener">Open Windy ↗</a>
+    </div>
+    <div class="map-shell windy-shell">
+      <iframe id="windyRadarFrame"
+        src="https://embed.windy.com/embed2.html?lat=13.0827&lon=80.2707&detailLat=13.0827&detailLon=80.2707&width=100%&height=100%&zoom=9&level=surface&overlay=rain&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=true&type=map&location=coordinates"
+        title="Windy live radar map" loading="lazy"></iframe>
+    </div>
+    <div class="map-switcher">
+      <button class="map-switch active" data-windy-overlay="rain">🌧️ Radar</button>
+      <button class="map-switch" data-windy-overlay="wind">💨 Wind</button>
+      <button class="map-switch" data-windy-overlay="temp">🌡️ Temperature</button>
+    </div>
+  </section>
+
+  <!-- RAINVIEWER -->
+  <section id="tab-rain" class="tab-panel">
+    <h2>Rain Timeline</h2>
+    <p class="hint">Recent precipitation + short forecast</p>
+    <div id="rainMap" class="leaflet-map"></div>
+    <div class="playback-bar">
+      <button id="playBtn" class="play-btn">▶ Play</button>
+      <input id="frameSlider" type="range" min="0" max="0" value="0">
+      <span id="frameTime" class="frame-time">--:--</span>
+    </div>
+  </section>
+
+  <!-- LIGHTNING -->
+  <section id="tab-lightning" class="tab-panel">
+    <div class="section-title-row">
+      <div><h2>Lightning Tracker</h2><p id="lightningSource" class="hint">Live thunderstorm activity</p></div>
+      <a class="external-btn" href="https://www.windy.com/13.083/80.271?thunder" target="_blank" rel="noopener">Windy Lightning ↗</a>
+    </div>
+    <div class="map-shell windy-shell">
+      <iframe id="windyLightningFrame"
+        src="https://embed.windy.com/embed2.html?lat=13.0827&lon=80.2707&detailLat=13.0827&detailLon=80.2707&width=100%&height=100%&zoom=9&level=surface&overlay=thunder&product=ecmwf&menu=&message=true&marker=true&calendar=now&type=map&location=coordinates"
+        title="Windy lightning map" loading="lazy"></iframe>
+    </div>
+    <div class="lightning-summary">
+      <div><span class="pulse-dot"></span><b id="strikeCount">--</b><small>recent strikes in demo area</small></div>
+      <div><span>⚡</span><b id="lightningRisk">Checking</b><small>local lightning risk</small></div>
+    </div>
+    <div id="lightningMap" class="leaflet-map compact-map"></div>
+  </section>
+
+  <!-- SATELLITE -->
+  <section id="tab-satellite" class="tab-panel">
+    <div class="section-title-row">
+      <div><h2>Satellite View</h2><p class="hint">Cloud &amp; storm movement over Chennai</p></div>
+      <a class="external-btn" href="https://www.windy.com/13.083/80.271?clouds" target="_blank" rel="noopener">Open Satellite ↗</a>
+    </div>
+    <div class="map-shell windy-shell">
+      <iframe id="windySatelliteFrame"
+        src="https://embed.windy.com/embed2.html?lat=13.0827&lon=80.2707&detailLat=13.0827&detailLon=80.2707&width=100%&height=100%&zoom=8&level=surface&overlay=satellite&product=ecmwf&menu=&message=true&marker=true&calendar=now&type=map&location=coordinates"
+        title="Windy satellite map" loading="lazy"></iframe>
+    </div>
+    <div class="info-note">🛰️ Use the timeline in the map to watch cloud systems move toward Chennai.</div>
+  </section>
+
+  <!-- NEWS -->
+  <section id="tab-news" class="tab-panel">
+    <div class="section-title-row">
+      <div><h2>Weather News</h2><p class="hint">Local weather stories and official updates</p></div>
+      <button id="refreshNews" class="text-btn">↻ Refresh</button>
+    </div>
+    <div class="news-tabs">
+      <button class="news-filter active" data-news-filter="all">All</button>
+      <button class="news-filter" data-news-filter="rain">Rain</button>
+      <button class="news-filter" data-news-filter="cyclone">Cyclone</button>
+      <button class="news-filter" data-news-filter="safety">Safety</button>
+    </div>
+    <div id="newsList" class="news-list"><div class="empty-state">Loading news…</div></div>
+  </section>
+
+  <!-- ALERTS -->
+  <section id="tab-alerts" class="tab-panel">
+    <div class="section-title-row">
+      <div><h2>Weather &amp; Disaster Alerts</h2><p class="hint">Official warnings from IMD / NDMA SACHET</p></div>
+      <button id="refreshAlerts" class="text-btn">↻ Refresh</button>
+    </div>
+    <div id="alertSummary" class="alert-summary-grid"></div>
+    <div id="alertsList" class="alerts-list"><div class="empty-state">Loading alerts…</div></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="tab-panel">
+    <div class="section-title-row"><div><h2>App Settings</h2><p class="hint">Make WeatherGPT work the way you want</p></div></div>
+    <div class="settings-card">
+      <div class="setting-row"><div><b>📍 Default location</b><small>Choose the place shown on Home</small></div><select id="settingsLocation"><option value="chennai">Chennai</option><option value="pallikaranai">Pallikaranai</option></select></div>
+      <div class="setting-row"><div><b>🔔 Weather alerts</b><small>Browser notifications for important warnings</small></div><button id="settingsNotif" class="toggle-btn">Enable</button></div>
+      <div class="setting-row"><div><b>🔄 Auto refresh</b><small>Keep weather and alerts up to date</small></div><button id="settingsRefresh" class="toggle-btn on">On</button></div>
+    </div>
+    <div class="emergency-card"><span>🚨</span><div><b>Emergency guidance</b><p>For immediate danger, follow local authorities and emergency services. WeatherGPT is an information aid, not an emergency dispatch service.</p></div></div>
+  </section>
+
+  <!-- PRECAUTIONS -->
+  <section id="tab-precautions" class="tab-panel">
+    <div class="section-title-row">
+      <div><h2>Safety &amp; Precautions</h2><p class="hint">Simple actions based on current weather risk</p></div>
+    </div>
+    <div id="precautionBanner" class="precaution-banner">
+      <span>🛡️</span><div><b>Stay weather-aware</b><small>Checking the latest conditions…</small></div>
+    </div>
+    <div class="precaution-grid">
+      <article class="precaution-card"><span>⛈️</span><h3>Thunderstorm</h3><p>Move indoors when thunder is heard. Avoid open fields, rooftops and isolated trees.</p></article>
+      <article class="precaution-card"><span>🌧️</span><h3>Heavy Rain</h3><p>Avoid flooded roads and underpasses. Keep phones charged and carry essential medicines.</p></article>
+      <article class="precaution-card"><span>🌬️</span><h3>Strong Wind</h3><p>Secure loose objects, stay away from weak structures and avoid unnecessary travel.</p></article>
+      <article class="precaution-card"><span>🌊</span><h3>Flood Risk</h3><p>Never walk or drive through moving floodwater. Follow official evacuation instructions.</p></article>
+      <article class="precaution-card"><span>☀️</span><h3>Heat &amp; UV</h3><p>Drink water regularly, use shade and reduce strenuous outdoor activity during peak heat.</p></article>
+      <article class="precaution-card"><span>📱</span><h3>Emergency Ready</h3><p>Keep alerts enabled, save emergency contacts and monitor official government updates.</p></article>
+    </div>
+  </section>
+
+</main>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-goto="tab-home">🏠<span>Home</span></button>
+  <button class="nav-btn" data-goto="tab-chat">🤖<span>AI Chat</span></button>
+  <button class="nav-btn" data-goto="tab-weather">🌤️<span>Weather</span></button>
+  <button class="nav-btn" data-goto="tab-radar">🌧️<span>Radar</span></button>
+  <button class="nav-btn" data-goto="tab-alerts">🚨<span>Alerts</span></button>
+</nav>
+
+<!-- FLOATING AI CHAT WIDGET BUTTON -->
+<button id="floatingChatBtn" class="floating-chat-btn" title="Ask WeatherGPT AI">
+  🤖 Ask AI
+</button>
+
+<div id="toastRoot" class="toast-root"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

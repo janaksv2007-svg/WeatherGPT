@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+
+# Pytest / Cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+build/
+*.apk
+*.aab
+
+# Archives
+*.zip
+*.tar.gz
+
+# IDEs
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,32 @@
+{
+  "Chennai": {
+    "location": "Chennai",
+    "temperature": 29,
+    "feels_like": 33,
+    "humidity": 82,
+    "rainfall_mm": 45,
+    "rain_probability": 70,
+    "wind_speed_kmh": 22,
+    "condition": "Heavy Rain"
+  },
+  "Mumbai": {
+    "location": "Mumbai",
+    "temperature": 27,
+    "feels_like": 30,
+    "humidity": 86,
+    "rainfall_mm": 38,
+    "rain_probability": 80,
+    "wind_speed_kmh": 25,
+    "condition": "Rain"
+  },
+  "Delhi": {
+    "location": "Delhi",
+    "temperature": 32,
+    "feels_like": 35,
+    "humidity": 58,
+    "rainfall_mm": 5,
+    "rain_probability": 20,
+    "wind_speed_kmh": 14,
+    "condition": "Partly Cloudy"
+  }
+}

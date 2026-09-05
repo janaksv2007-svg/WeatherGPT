@@ -1,0 +1,1991 @@
+# WeatherGPT — Complete Final Integration Contract
+
+**Version:** 1.0
+**Project:** WeatherGPT
+**Purpose:** Define exactly how all 6 members integrate their modules and how Flutter communicates with the backend.
+
+---
+
+# 1. Overall Architecture
+
+```text
+                         ┌──────────────────────┐
+                         │      Flutter UI      │
+                         │      Member 4        │
+                         └──────────┬───────────┘
+                                    │
+                              HTTP / JSON
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │      FastAPI         │
+                         │   Integration Layer  │
+                         └──────────┬───────────┘
+                                    │
+                 ┌──────────────────┼──────────────────┐
+                 │                  │                  │
+                 ▼                  ▼                  ▼
+        ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
+        │ AI / Chatbot   │ │ Weather API    │ │ Risk Engine    │
+        │ Member 1       │ │ Member 2       │ │ Member 3       │
+        └───────┬────────┘ └───────┬────────┘ └───────┬────────┘
+                │                  │                  │
+                │                  │                  │
+                └──────────────────┼──────────────────┘
+                                   │
+                                   ▼
+                         ┌──────────────────────┐
+                         │ Risk Map + Alerts    │
+                         │ Member 5             │
+                         └──────────────────────┘
+
+                         ┌──────────────────────┐
+                         │ Climate + Languages │
+                         │ + Testing            │
+                         │ Member 6             │
+                         └──────────────────────┘
+```
+
+### Golden Rule
+
+> **Flutter displays. FastAPI connects. AI interprets. Weather API provides weather. Risk Engine calculates risk. Simulation Engine calculates scenarios. Risk Map/Alerts visualizes warnings.**
+
+No member should directly depend on another member's internal Python classes.
+
+Communication happens through **JSON contracts**.
+
+---
+
+# 2. Members and Responsibilities
+
+| Member | Module                           | Main Responsibility                            |
+| ------ | -------------------------------- | ---------------------------------------------- |
+| **1**  | AI / Chatbot                     | Intent, location, time, language, conversation |
+| **2**  | Weather API                      | Current/hourly/daily weather                   |
+| **3**  | Risk + Simulation                | Risk score and what-if calculations            |
+| **4**  | Flutter/UI                       | User interface and API integration             |
+| **5**  | Risk Map + Alerts                | Maps, danger zones, alerts                     |
+| **6**  | Climate + Multilingual + Testing | Climate data, translations, testing            |
+
+---
+
+# 3. Communication Architecture
+
+All communication should eventually go through the FastAPI backend.
+
+```text
+Flutter
+   │
+   │ POST /chat
+   ▼
+FastAPI
+   │
+   ├──► Member 1: AI analysis
+   │
+   ├──► Member 2: Weather
+   │
+   ├──► Member 3: Risk / Simulation
+   │
+   ├──► Member 5: Alerts / Map
+   │
+   └──► Member 6: Language / Climate
+   │
+   ▼
+Final JSON
+   │
+   ▼
+Flutter
+```
+
+---
+
+# 4. Base API URL
+
+During development:
+
+```text
+http://127.0.0.1:8000
+```
+
+For Flutter running on an Android emulator, usually:
+
+```text
+http://10.0.2.2:8000
+```
+
+For a physical phone connected to the same Wi-Fi:
+
+```text
+http://YOUR-PC-IP:8000
+```
+
+Example:
+
+```text
+http://192.168.1.10:8000
+```
+
+For deployment:
+
+```text
+https://your-weathergpt-api.com
+```
+
+Flutter should store this as a configurable `BASE_URL`, not hard-code it throughout the application.
+
+---
+
+# 5. Common JSON Rules
+
+Every module must follow these rules:
+
+```text
+JSON only
+UTF-8
+snake_case field names
+null when information is unavailable
+ISO dates where actual dates are returned
+latitude/longitude as numbers
+risk_score between 0 and 100
+```
+
+Never:
+
+```text
+"Chennai" when location is unknown
+```
+
+unless the user explicitly mentioned Chennai or it was established by conversation context/current-location functionality.
+
+---
+
+# 6. MEMBER 1 — AI / CHATBOT
+
+## Responsibility
+
+Member 1 handles:
+
+* Natural-language understanding
+* Gemini integration
+* Intent detection
+* Location extraction
+* Time extraction
+* Language detection
+* Conversation memory
+* Follow-up questions
+* Weather-query interpretation
+* Risk-query interpretation
+* What-if parameter extraction
+* Final natural-language response
+
+Member 1 **does not calculate weather or risk**.
+
+---
+
+# 7. Member 1 Input
+
+FastAPI → Member 1:
+
+```json
+{
+  "session_id": "session-001",
+  "message": "Will it rain in Chennai tomorrow?"
+}
+```
+
+---
+
+# 8. Member 1 AI Analysis Response
+
+Member 1 should return:
+
+```json
+{
+  "session_id": "session-001",
+  "message": "Will it rain in Chennai tomorrow?",
+
+  "intent": "RAIN_FORECAST",
+
+  "location": {
+    "name": "Chennai",
+    "latitude": 13.08784,
+    "longitude": 80.27847
+  },
+
+  "comparison_location": null,
+
+  "time": {
+    "date": "tomorrow",
+    "time_period": null,
+    "exact_time": null
+  },
+
+  "language": "en",
+
+  "parameters": {
+    "rainfall_change_mm": null,
+    "wind_speed_kmh": null,
+    "target_rainfall_mm": null
+  },
+
+  "requires_weather_data": true,
+  "requires_risk_analysis": false,
+  "requires_simulation": false
+}
+```
+
+---
+
+# 9. Supported Intents
+
+```text
+CURRENT_WEATHER
+HOURLY_FORECAST
+DAILY_FORECAST
+RAIN_FORECAST
+TEMPERATURE
+WIND
+HUMIDITY
+WEATHER_ALERT
+WEATHER_EXPLANATION
+WEATHER_COMPARISON
+TRAVEL_WEATHER
+OUTDOOR_ACTIVITY
+WEATHER_RISK
+WHAT_IF_SCENARIO
+GENERAL_WEATHER_CHAT
+UNKNOWN
+```
+
+---
+
+# 10. What-If Example
+
+User:
+
+```text
+What if rainfall increases to 100 mm in Chennai?
+```
+
+Member 1 returns:
+
+```json
+{
+  "intent": "WHAT_IF_SCENARIO",
+
+  "location": {
+    "name": "Chennai",
+    "latitude": 13.08784,
+    "longitude": 80.27847
+  },
+
+  "time": {
+    "date": "today",
+    "time_period": null,
+    "exact_time": null
+  },
+
+  "parameters": {
+    "rainfall_change_mm": null,
+    "wind_speed_kmh": null,
+    "target_rainfall_mm": 100
+  },
+
+  "requires_weather_data": true,
+  "requires_risk_analysis": true,
+  "requires_simulation": true
+}
+```
+
+Member 1 **does not calculate** the simulated risk.
+
+---
+
+# 11. Member 2 — WEATHER API
+
+## Responsibility
+
+Member 2 provides:
+
+* Current weather
+* Hourly forecast
+* Daily forecast
+* Temperature
+* Feels-like temperature
+* Humidity
+* Wind
+* Rainfall
+* Rain probability
+* Weather condition
+* Weather timestamps
+
+---
+
+# 12. Member 2 Request
+
+FastAPI → Member 2:
+
+```json
+{
+  "location": {
+    "name": "Chennai",
+    "latitude": 13.08784,
+    "longitude": 80.27847
+  },
+
+  "intent": "RAIN_FORECAST",
+
+  "time": {
+    "date": "tomorrow",
+    "time_period": null,
+    "exact_time": null
+  }
+}
+```
+
+---
+
+# 13. Member 2 Response
+
+```json
+{
+  "location": "Chennai",
+
+  "forecast_type": "daily",
+
+  "forecast": {
+    "date": "2026-09-05",
+    "temperature": 29,
+    "feels_like": 32,
+    "humidity": 80,
+    "rainfall_mm": 20,
+    "rain_probability": 70,
+    "wind_speed_kmh": 18,
+    "condition": "Light Rain"
+  }
+}
+```
+
+---
+
+# 14. Hourly Weather Response
+
+For:
+
+```text
+What's the weather in Chennai for the next 6 hours?
+```
+
+Return:
+
+```json
+{
+  "location": "Chennai",
+  "forecast_type": "hourly",
+
+  "forecast": [
+    {
+      "datetime": "2026-09-04T18:00:00+05:30",
+      "temperature": 29,
+      "humidity": 82,
+      "rainfall_mm": 5,
+      "rain_probability": 60,
+      "wind_speed_kmh": 18,
+      "condition": "Rain"
+    },
+    {
+      "datetime": "2026-09-04T19:00:00+05:30",
+      "temperature": 28,
+      "humidity": 84,
+      "rainfall_mm": 8,
+      "rain_probability": 75,
+      "wind_speed_kmh": 20,
+      "condition": "Heavy Rain"
+    }
+  ]
+}
+```
+
+---
+
+# 15. MEMBER 3 — RISK + WHAT-IF SIMULATION
+
+## Responsibility
+
+Member 3 owns:
+
+### Risk
+
+```text
+Risk score
+Risk level
+Primary risk
+Risk factors
+```
+
+### Simulation
+
+```text
+Baseline risk
+Scenario
+Simulated risk
+Risk change
+```
+
+Member 3 is the **only module responsible for risk calculations**.
+
+---
+
+# 16. Risk Request
+
+FastAPI → Member 3:
+
+```json
+{
+  "location": {
+    "name": "Chennai",
+    "latitude": 13.08784,
+    "longitude": 80.27847
+  },
+
+  "weather": {
+    "temperature": 29,
+    "humidity": 80,
+    "rainfall_mm": 45,
+    "rain_probability": 85,
+    "wind_speed_kmh": 22,
+    "condition": "Heavy Rain"
+  }
+}
+```
+
+---
+
+# 17. Risk Response
+
+```json
+{
+  "risk_score": 72,
+  "risk_level": "HIGH",
+  "primary_risk": "Flooding",
+
+  "factors": {
+    "rainfall": 85,
+    "wind": 40,
+    "temperature": 20
+  }
+}
+```
+
+---
+
+# 18. Risk Levels
+
+Recommended contract:
+
+```text
+0–39    LOW
+40–69   MEDIUM
+70–100  HIGH
+```
+
+Member 3 owns the actual calculation.
+
+---
+
+# 19. What-If Request
+
+For:
+
+```text
+What if rainfall increases to 100 mm?
+```
+
+FastAPI → Member 3:
+
+```json
+{
+  "location": {
+    "name": "Chennai",
+    "latitude": 13.08784,
+    "longitude": 80.27847
+  },
+
+  "weather": {
+    "rainfall_mm": 45,
+    "wind_speed_kmh": 22
+  },
+
+  "scenario": {
+    "type": "rainfall",
+    "target_rainfall_mm": 100,
+    "rainfall_change_mm": null,
+    "target_wind_speed_kmh": null
+  }
+}
+```
+
+---
+
+# 20. What-If Response
+
+```json
+{
+  "scenario": {
+    "type": "rainfall",
+    "target_rainfall_mm": 100
+  },
+
+  "baseline_risk": 55,
+  "simulated_risk": 78,
+  "risk_change": 23,
+  "risk_level": "HIGH"
+}
+```
+
+Flutter can display:
+
+```text
+        ⚠️ HIGH RISK
+
+Current Risk       55
+Simulated Risk     78
+
+Risk Change       +23
+
+Scenario:
+Rainfall → 100 mm
+```
+
+---
+
+# 21. MEMBER 4 — FLUTTER
+
+## Responsibility
+
+Member 4 handles:
+
+* Chat interface
+* Weather dashboard
+* Forecast cards
+* Risk cards
+* Simulation UI
+* Map UI
+* Alerts UI
+* Language selector
+* Loading states
+* Error states
+* API communication
+
+Flutter **does not calculate risk or interpret natural language**.
+
+---
+
+# 22. Flutter → Backend
+
+Flutter sends:
+
+```http
+POST /chat
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "session_id": "flutter-session-001",
+  "message": "Will it rain in Chennai tomorrow?"
+}
+```
+
+---
+
+# 23. Backend → Flutter
+
+Recommended unified response:
+
+```json
+{
+  "success": true,
+
+  "session_id": "flutter-session-001",
+
+  "user_message": "Will it rain in Chennai tomorrow?",
+
+  "analysis": {
+    "intent": "RAIN_FORECAST",
+
+    "location": {
+      "name": "Chennai",
+      "latitude": 13.08784,
+      "longitude": 80.27847
+    },
+
+    "time": {
+      "date": "tomorrow",
+      "time_period": null,
+      "exact_time": null
+    },
+
+    "language": "en"
+  },
+
+  "weather": {
+    "location": "Chennai",
+    "temperature": 29,
+    "feels_like": 32,
+    "humidity": 80,
+    "rainfall_mm": 20,
+    "rain_probability": 70,
+    "wind_speed_kmh": 18,
+    "condition": "Light Rain"
+  },
+
+  "risk": null,
+
+  "simulation": null,
+
+  "alerts": [],
+
+  "response": "There is a 70% chance of rain in Chennai tomorrow."
+}
+```
+
+---
+
+# 24. Flutter Chat UI
+
+Flutter should primarily use:
+
+```text
+response
+```
+
+for the conversational answer.
+
+Use:
+
+```text
+weather
+```
+
+for weather cards.
+
+Use:
+
+```text
+risk
+```
+
+for risk cards.
+
+Use:
+
+```text
+simulation
+```
+
+for What-If cards.
+
+Use:
+
+```text
+alerts
+```
+
+for alert banners.
+
+---
+
+# 25. Flutter Endpoints
+
+## Chat
+
+```http
+POST /chat
+```
+
+Purpose:
+
+```text
+Normal conversational weather interaction
+```
+
+---
+
+## Analyze
+
+```http
+POST /analyze
+```
+
+Purpose:
+
+```text
+Return AI interpretation without necessarily generating the final response.
+```
+
+Request:
+
+```json
+{
+  "session_id": "session-001",
+  "message": "What if rainfall increases to 100 mm in Chennai?"
+}
+```
+
+---
+
+## Health
+
+```http
+GET /health
+```
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+Flutter can use this for backend connectivity checking.
+
+---
+
+# 26. Optional Weather Endpoint
+
+If the team wants direct dashboard access:
+
+```http
+POST /weather
+```
+
+Request:
+
+```json
+{
+  "location": {
+    "name": "Chennai",
+    "latitude": 13.08784,
+    "longitude": 80.27847
+  },
+  "forecast_type": "daily"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "weather": {}
+}
+```
+
+This is optional because `/chat` can already orchestrate the weather request.
+
+---
+
+# 27. MEMBER 5 — RISK MAP + ALERTS
+
+## Responsibility
+
+Member 5 handles:
+
+* Risk map
+* Location markers
+* Danger zones
+* Weather warning visualization
+* Alert generation/display
+* Geographic risk visualization
+
+---
+
+# 28. Alert Response
+
+```json
+{
+  "alerts": [
+    {
+      "id": "alert-001",
+      "type": "FLOOD",
+      "severity": "HIGH",
+      "title": "Heavy Rain Alert",
+      "message": "Heavy rainfall may cause localized flooding.",
+      "location": {
+        "name": "Chennai",
+        "latitude": 13.08784,
+        "longitude": 80.27847
+      },
+      "valid_from": "2026-09-04T18:00:00+05:30",
+      "valid_until": "2026-09-05T06:00:00+05:30"
+    }
+  ]
+}
+```
+
+---
+
+# 29. Risk Map Data
+
+```json
+{
+  "map_data": [
+    {
+      "location": "Chennai",
+      "latitude": 13.08784,
+      "longitude": 80.27847,
+      "risk_score": 72,
+      "risk_level": "HIGH",
+      "primary_risk": "Flooding"
+    }
+  ]
+}
+```
+
+Flutter uses this to render map markers/regions.
+
+---
+
+# 30. Member 5 Receives
+
+Member 5 can receive:
+
+```text
+Weather data
+Risk score
+Location coordinates
+Alert thresholds
+```
+
+Member 5 does **not redefine Member 3's risk calculation**.
+
+---
+
+# 31. MEMBER 6 — CLIMATE + MULTILINGUAL + TESTING
+
+## Responsibility
+
+Member 6 handles:
+
+### Climate
+
+```text
+Historical weather
+Climate trends
+Long-term comparison
+Climate insights
+```
+
+### Multilingual
+
+Initially:
+
+```text
+English
+Tamil
+Hindi
+```
+
+Architecture should allow:
+
+```text
+English
+Tamil
+Hindi
+Telugu
+Malayalam
+Kannada
+etc.
+```
+
+### Testing
+
+Member 6 tests:
+
+```text
+API integration
+AI responses
+Language detection
+JSON contracts
+Edge cases
+End-to-end flows
+```
+
+---
+
+# 32. Language Contract
+
+Use language codes:
+
+```text
+en = English
+ta = Tamil
+hi = Hindi
+te = Telugu
+ml = Malayalam
+kn = Kannada
+```
+
+Example:
+
+```json
+{
+  "language": "ta"
+}
+```
+
+---
+
+# 33. Tamil Example
+
+User:
+
+```text
+சென்னையில் நாளைக்கு மழை பெய்யுமா?
+```
+
+AI analysis:
+
+```json
+{
+  "intent": "RAIN_FORECAST",
+
+  "location": {
+    "name": "Chennai",
+    "latitude": 13.08784,
+    "longitude": 80.27847
+  },
+
+  "time": {
+    "date": "tomorrow"
+  },
+
+  "language": "ta",
+
+  "requires_weather_data": true
+}
+```
+
+Final response:
+
+```text
+நாளை சென்னையில் மழை பெய்ய 70% வாய்ப்பு உள்ளது.
+```
+
+---
+
+# 34. Climate Request
+
+Member 6 can expose:
+
+```http
+POST /climate
+```
+
+Example:
+
+```json
+{
+  "location": {
+    "name": "Chennai",
+    "latitude": 13.08784,
+    "longitude": 80.27847
+  },
+
+  "period": "10_years",
+
+  "metric": "temperature"
+}
+```
+
+Response:
+
+```json
+{
+  "location": "Chennai",
+  "metric": "temperature",
+  "period": "10_years",
+  "average_temperature": 29.4,
+  "trend": "increasing"
+}
+```
+
+---
+
+# 35. COMPLETE END-TO-END FLOW
+
+## Example 1 — Normal Weather
+
+User:
+
+```text
+What's the weather in Chennai?
+```
+
+### Step 1 — Flutter
+
+```json
+{
+  "session_id": "session-001",
+  "message": "What's the weather in Chennai?"
+}
+```
+
+### Step 2 — Member 1
+
+```text
+Intent = CURRENT_WEATHER
+Location = Chennai
+Time = today
+```
+
+### Step 3 — Member 2
+
+Returns weather.
+
+### Step 4 — Member 3
+
+Not required.
+
+### Step 5 — Member 5
+
+Checks whether alerts need to be shown.
+
+### Step 6 — Member 1
+
+Generates final response.
+
+### Step 7 — Flutter
+
+Displays:
+
+```text
+🌤️ Chennai
+
+29°C
+Humidity: 80%
+Wind: 18 km/h
+
+Condition: Partly Cloudy
+```
+
+---
+
+# 36. Example 2 — Rain Forecast
+
+User:
+
+```text
+Will it rain in Chennai tomorrow?
+```
+
+Flow:
+
+```text
+Flutter
+ ↓
+Member 1
+ ↓
+RAIN_FORECAST
+Chennai
+Tomorrow
+ ↓
+Member 2
+ ↓
+Rain forecast
+ ↓
+Member 1
+ ↓
+Natural language response
+ ↓
+Flutter
+```
+
+---
+
+# 37. Example 3 — Weather Risk
+
+User:
+
+```text
+Is Chennai weather dangerous today?
+```
+
+Member 1:
+
+```json
+{
+  "intent": "WEATHER_RISK",
+  "requires_weather_data": true,
+  "requires_risk_analysis": true
+}
+```
+
+Then:
+
+```text
+Member 2
+   ↓
+Weather
+   ↓
+Member 3
+   ↓
+Risk calculation
+   ↓
+Member 1
+   ↓
+Explanation
+   ↓
+Flutter
+```
+
+Final:
+
+```json
+{
+  "response": "Chennai currently has a high weather risk, mainly due to heavy rainfall.",
+
+  "risk": {
+    "risk_score": 72,
+    "risk_level": "HIGH",
+    "primary_risk": "Flooding"
+  }
+}
+```
+
+---
+
+# 38. Example 4 — What-If
+
+User:
+
+```text
+What if rainfall increases to 100 mm in Chennai?
+```
+
+Flow:
+
+```text
+Flutter
+   ↓
+Member 1
+   ↓
+Extract scenario
+   ↓
+Member 2
+   ↓
+Get baseline weather
+   ↓
+Member 3
+   ↓
+Calculate simulation
+   ↓
+Member 1
+   ↓
+Explain result
+   ↓
+Flutter
+```
+
+Final:
+
+```json
+{
+  "response": "If rainfall reaches 100 mm, the simulated risk increases to 78, which is HIGH risk.",
+
+  "risk": {
+    "risk_score": 55,
+    "risk_level": "MEDIUM"
+  },
+
+  "simulation": {
+    "baseline_risk": 55,
+    "simulated_risk": 78,
+    "risk_change": 23,
+    "risk_level": "HIGH"
+  }
+}
+```
+
+---
+
+# 39. Example 5 — Comparison
+
+User:
+
+```text
+Compare Chennai and Mumbai tomorrow.
+```
+
+Member 1:
+
+```json
+{
+  "intent": "WEATHER_COMPARISON",
+
+  "location": {
+    "name": "Chennai"
+  },
+
+  "comparison_location": {
+    "name": "Mumbai"
+  },
+
+  "time": {
+    "date": "tomorrow"
+  },
+
+  "requires_weather_data": true
+}
+```
+
+Member 2 gets:
+
+```text
+Chennai weather
++
+Mumbai weather
+```
+
+Final response:
+
+```json
+{
+  "response": "Tomorrow, Mumbai is expected to be wetter than Chennai, while Chennai will have slightly higher temperatures.",
+
+  "weather": {
+    "primary": {},
+    "comparison": {}
+  }
+}
+```
+
+---
+
+# 40. Conversation Memory
+
+Every Flutter session must have a:
+
+```text
+session_id
+```
+
+Example:
+
+```text
+session-001
+```
+
+Conversation:
+
+```text
+User:
+What's the weather in Chennai?
+
+AI:
+...
+
+User:
+What about tomorrow?
+
+AI:
+Tomorrow in Chennai...
+```
+
+Member 1 uses the existing session context.
+
+### Important
+
+If the user explicitly changes location:
+
+```text
+What's the weather in Mumbai?
+```
+
+the new location **overrides the previous Chennai location**.
+
+---
+
+# 41. Unified Final Response Schema
+
+Every `/chat` response should ideally follow:
+
+```json
+{
+  "success": true,
+
+  "session_id": "session-001",
+
+  "user_message": "...",
+
+  "analysis": {},
+
+  "weather": null,
+
+  "risk": null,
+
+  "simulation": null,
+
+  "alerts": [],
+
+  "climate": null,
+
+  "response": "...",
+
+  "error": null
+}
+```
+
+This is the **main contract between FastAPI and Flutter**.
+
+Flutter doesn't need to understand the internal modules.
+
+---
+
+# 42. Error Response
+
+If something fails:
+
+```json
+{
+  "success": false,
+
+  "session_id": "session-001",
+
+  "user_message": "What's the weather in Chennai?",
+
+  "analysis": null,
+
+  "weather": null,
+
+  "risk": null,
+
+  "simulation": null,
+
+  "alerts": [],
+
+  "climate": null,
+
+  "response": "Sorry, I couldn't retrieve the weather information right now.",
+
+  "error": {
+    "code": "WEATHER_API_ERROR",
+    "message": "Weather service unavailable"
+  }
+}
+```
+
+Recommended error codes:
+
+```text
+INVALID_REQUEST
+INVALID_LOCATION
+WEATHER_API_ERROR
+RISK_ENGINE_ERROR
+SIMULATION_ERROR
+AI_ERROR
+LANGUAGE_ERROR
+INTERNAL_ERROR
+```
+
+---
+
+# 43. HTTP Status Codes
+
+Use:
+
+```text
+200 → Success
+400 → Invalid request
+404 → Resource/location not found
+422 → Validation error
+500 → Internal server error
+503 → External service unavailable
+```
+
+---
+
+# 44. Responsibility Boundaries
+
+This is **very important** for your team.
+
+| Task                      | Owner               |
+| ------------------------- | ------------------- |
+| Understand user message   | Member 1            |
+| Detect intent             | Member 1            |
+| Extract location          | Member 1            |
+| Extract time              | Member 1            |
+| Detect language           | Member 1 / Member 6 |
+| Conversation memory       | Member 1            |
+| Get weather               | Member 2            |
+| Calculate weather metrics | Member 2            |
+| Calculate risk            | Member 3            |
+| Calculate simulation      | Member 3            |
+| Display UI                | Member 4            |
+| Display maps              | Member 5            |
+| Generate alerts           | Member 5            |
+| Climate analysis          | Member 6            |
+| Translation/localization  | Member 6            |
+| Integration testing       | Member 6            |
+
+---
+
+# 45. What Each Member MUST Give
+
+## Member 1 → Backend
+
+Must provide:
+
+```text
+intent
+location
+comparison_location
+time
+language
+parameters
+requires_weather_data
+requires_risk_analysis
+requires_simulation
+```
+
+---
+
+## Member 2 → Backend
+
+Must provide:
+
+```text
+location
+forecast_type
+temperature
+feels_like
+humidity
+rainfall
+rain_probability
+wind
+condition
+datetime/date
+```
+
+---
+
+## Member 3 → Backend
+
+Must provide:
+
+```text
+risk_score
+risk_level
+primary_risk
+factors
+
+baseline_risk
+simulated_risk
+risk_change
+scenario
+```
+
+---
+
+## Member 4 → Backend
+
+Must provide:
+
+```text
+session_id
+message
+```
+
+Optionally:
+
+```text
+language
+current_location
+device_timezone
+```
+
+---
+
+## Member 5 → Backend
+
+Must provide:
+
+```text
+alerts
+map_data
+severity
+risk zones
+coordinates
+```
+
+---
+
+## Member 6 → Backend
+
+Must provide:
+
+```text
+language support
+translation
+climate data
+test cases
+validation results
+```
+
+---
+
+# 46. What Each Member Receives
+
+### Member 1 receives
+
+```text
+User message
+Session ID
+Weather data
+Risk data
+Simulation data
+Alert data
+Climate data
+```
+
+---
+
+### Member 2 receives
+
+```text
+Location
+Coordinates
+Intent
+Time
+Forecast type
+```
+
+---
+
+### Member 3 receives
+
+```text
+Weather data
+Location
+Scenario parameters
+```
+
+---
+
+### Member 4 receives
+
+```text
+Final response
+Weather
+Risk
+Simulation
+Alerts
+Climate
+```
+
+---
+
+### Member 5 receives
+
+```text
+Location
+Weather
+Risk
+```
+
+---
+
+### Member 6 receives
+
+```text
+Language
+Weather/climate information
+Test scenarios
+API responses
+```
+
+---
+
+# 47. Integration Order
+
+Do **not** try to integrate everything simultaneously.
+
+Use this order:
+
+### Phase 1
+
+```text
+Member 1 ↔ FastAPI
+```
+
+Test:
+
+```text
+POST /chat
+```
+
+---
+
+### Phase 2
+
+```text
+Member 1 ↔ Member 2
+```
+
+Test:
+
+```text
+User
+ ↓
+AI
+ ↓
+Weather API
+ ↓
+Response
+```
+
+---
+
+### Phase 3
+
+```text
+Member 3
+```
+
+Add:
+
+```text
+Weather
+ ↓
+Risk
+```
+
+---
+
+### Phase 4
+
+Add:
+
+```text
+What-If
+```
+
+---
+
+### Phase 5
+
+Add:
+
+```text
+Member 5
+Risk Map + Alerts
+```
+
+---
+
+### Phase 6
+
+Add:
+
+```text
+Member 6
+Languages + Climate + Testing
+```
+
+---
+
+### Phase 7
+
+Connect:
+
+```text
+Flutter
+```
+
+---
+
+# 48. Final Flutter Integration
+
+Flutter only needs to know:
+
+```http
+POST /chat
+```
+
+Request:
+
+```json
+{
+  "session_id": "session-001",
+  "message": "What is the weather in Chennai?"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "session_id": "session-001",
+
+  "response": "The weather in Chennai is currently 29°C with heavy rain.",
+
+  "weather": {
+    "temperature": 29,
+    "humidity": 82,
+    "rainfall_mm": 45,
+    "wind_speed_kmh": 22,
+    "condition": "Heavy Rain"
+  },
+
+  "risk": {
+    "risk_score": 72,
+    "risk_level": "HIGH",
+    "primary_risk": "Flooding"
+  },
+
+  "simulation": null,
+
+  "alerts": []
+}
+```
+
+Flutter doesn't need to know whether that data came from Gemini, OpenWeather, another weather provider, your risk algorithm, or another internal module.
+
+---
+
+# 49. Final Folder/API Architecture
+
+Your FastAPI project can eventually look like:
+
+```text
+weathergpt_backend/
+│
+├── app/
+│   ├── main.py
+│   │
+│   ├── api/
+│   │   ├── chat.py
+│   │   ├── weather.py
+│   │   ├── risk.py
+│   │   ├── simulation.py
+│   │   ├── alerts.py
+│   │   └── climate.py
+│   │
+│   ├── ai/
+│   │   └── ...
+│   │
+│   ├── weather/
+│   │   └── ...
+│   │
+│   ├── risk/
+│   │   └── ...
+│   │
+│   ├── alerts/
+│   │   └── ...
+│   │
+│   ├── climate/
+│   │   └── ...
+│   │
+│   └── models/
+│       └── schemas.py
+│
+└── tests/
+```
+
+---
+
+# 50. Final API List
+
+| Endpoint    | Method   | Owner              | Purpose                  |
+| ----------- | -------- | ------------------ | ------------------------ |
+| `/health`   | GET      | Backend            | Server health            |
+| `/chat`     | POST     | Member 1 + Backend | Main Flutter interaction |
+| `/analyze`  | POST     | Member 1           | AI analysis              |
+| `/weather`  | POST     | Member 2           | Weather data             |
+| `/risk`     | POST     | Member 3           | Risk calculation         |
+| `/simulate` | POST     | Member 3           | What-if simulation       |
+| `/alerts`   | POST/GET | Member 5           | Weather alerts           |
+| `/map/risk` | POST/GET | Member 5           | Risk map                 |
+| `/climate`  | POST     | Member 6           | Climate information      |
+
+The exact internal endpoints can change, but **the JSON contracts must remain stable**.
+
+---
+
+# 51. 🚨 Critical Rules for Your Team
+
+### Rule 1
+
+**Never calculate risk inside Member 1.**
+
+Member 1 only extracts:
+
+```text
+"What if rainfall = 100 mm?"
+```
+
+Member 3 calculates what that means.
+
+---
+
+### Rule 2
+
+**Never put weather values inside Gemini as invented values.**
+
+Gemini receives actual weather data from Member 2.
+
+---
+
+### Rule 3
+
+**Flutter does not directly call Gemini.**
+
+```text
+Flutter → FastAPI → AI
+```
+
+not:
+
+```text
+Flutter → Gemini
+```
+
+---
+
+### Rule 4
+
+**Flutter does not directly call the weather provider.**
+
+```text
+Flutter → FastAPI → Weather module
+```
+
+---
+
+### Rule 5
+
+**No hard-coded Chennai/Mumbai defaults.**
+
+If location is unknown:
+
+```json
+"location": null
+```
+
+or use an explicitly supplied current-location mechanism.
+
+---
+
+### Rule 6
+
+**Session ID must remain consistent.**
+
+```text
+Flutter
+session-001
+     ↓
+FastAPI
+session-001
+     ↓
+AI
+session-001
+```
+
+---
+
+### Rule 7
+
+**Don't depend on another member's source code.**
+
+Depend on:
+
+```text
+JSON contract
+```
+
+not:
+
+```text
+Python class/function
+```
+
+---
+
+# 52. The One Diagram Everyone Should Follow
+
+```text
+                       USER
+                         │
+                         ▼
+                  ┌─────────────┐
+                  │   FLUTTER   │
+                  │  MEMBER 4  │
+                  └──────┬──────┘
+                         │
+                    POST /chat
+                         │
+                         ▼
+              ┌────────────────────┐
+              │      FASTAPI       │
+              │ Integration Layer  │
+              └─────────┬──────────┘
+                        │
+             ┌──────────┼──────────┐
+             ▼          ▼          ▼
+        ┌────────┐ ┌────────┐ ┌────────┐
+        │   AI   │ │Weather │ │  Risk  │
+        │ M1     │ │ M2     │ │ M3     │
+        └───┬────┘ └───┬────┘ └───┬────┘
+            │           │          │
+            │           │          │
+            └───────────┼──────────┘
+                        │
+              ┌─────────┴─────────┐
+              ▼                   ▼
+        ┌────────────┐      ┌────────────┐
+        │ Risk Map   │      │  Climate + │
+        │ + Alerts   │      │ Languages  │
+        │ M5         │      │ M6         │
+        └─────┬──────┘      └─────┬──────┘
+              │                   │
+              └─────────┬─────────┘
+                        ▼
+                 ┌──────────────┐
+                 │ FINAL JSON   │
+                 └──────┬───────┘
+                        │
+                        ▼
+                  ┌─────────────┐
+                  │   FLUTTER   │
+                  │   DISPLAY   │
+                  └─────────────┘
+```
+
+## ✅ Give this to your team
+
+The **most important contract to freeze first** is:
+
+```text
+Flutter → POST /chat
+              ↓
+          FastAPI
+              ↓
+     ┌────────┼────────┐
+     ↓        ↓        ↓
+    AI     Weather    Risk
+     │        │        │
+     └────────┼────────┘
+              ↓
+         Alerts/Map
+              ↓
+          Final JSON
+              ↓
+           Flutter
+```
+
+If everyone follows this contract, **each member can develop independently and you can integrate the six modules without rewriting everyone's code at the end.**

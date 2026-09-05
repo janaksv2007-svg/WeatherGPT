@@ -1,0 +1,43 @@
+{
+    "english": {
+        "weather": "Weather",
+        "temperature": "Temperature",
+        "rainfall": "Rainfall",
+        "humidity": "Humidity",
+        "wind": "Wind",
+        "forecast": "Forecast",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "high": "High",
+        "low": "Low",
+        "alert": "Alert"
+    },
+
+    "tamil": {
+        "weather": "வானிலை",
+        "temperature": "வெப்பநிலை",
+        "rainfall": "மழைப்பொழிவு",
+        "humidity": "ஈரப்பதம்",
+        "wind": "காற்று",
+        "forecast": "வானிலை முன்னறிவிப்பு",
+        "today": "இன்று",
+        "tomorrow": "நாளை",
+        "high": "அதிகபட்சம்",
+        "low": "குறைந்தபட்சம்",
+        "alert": "எச்சரிக்கை"
+    },
+
+    "hindi": {
+        "weather": "मौसम",
+        "temperature": "तापमान",
+        "rainfall": "वर्षा",
+        "humidity": "आर्द्रता",
+        "wind": "हवा",
+        "forecast": "मौसम पूर्वानुमान",
+        "today": "आज",
+        "tomorrow": "कल",
+        "high": "अधिकतम",
+        "low": "न्यूनतम",
+        "alert": "चेतावनी"
+    }
+}
