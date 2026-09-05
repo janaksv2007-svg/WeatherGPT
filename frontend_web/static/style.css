@@ -513,3 +513,150 @@ h3{margin:0;color:#f1f5f9}
   transform:scale(1.05);
   box-shadow:0 10px 30px rgba(99,102,241,.6);
 }
+
+/* ============================================================
+   CLIMATE INSIGHTS UI DESIGN (MATCHING SCREENSHOT)
+   ============================================================ */
+.climate-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.app-subbrand {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.climate-main-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin: 2px 0 0 0;
+}
+.climate-loc-select {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+.climate-top-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.climate-metric-card {
+  background: linear-gradient(145deg, #131c2e 0%, #0d1524 100%);
+  border: 1px solid #1e2d42;
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.metric-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.metric-icon-box.temp-fire {
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+.metric-icon-box.rain-cloud {
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+.metric-val {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+.metric-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+.climate-chart-card {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+.chart-card-header {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 14px;
+}
+.chart-canvas-container {
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+}
+
+/* WHAT-IF SIMULATOR */
+.simulator-card {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sim-row label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+}
+.sim-row input[type="range"] {
+  width: 100%;
+  accent-color: #38bdf8;
+}
+.sim-run-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(2,132,199,0.4);
+}
+.sim-result-card {
+  background: #111c30;
+  border: 1px solid #38bdf8;
+  border-radius: 16px;
+  padding: 16px;
+}
+.sim-score-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin: 10px 0;
+}
+.warn-text {
+  color: #f97316;
+}
+

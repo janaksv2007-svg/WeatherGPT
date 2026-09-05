@@ -6,6 +6,7 @@
 <title>WeatherGPT — Chennai Risk & Alerts & AI Chat</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -261,14 +262,95 @@
     </div>
   </section>
 
+  <!-- CLIMATE INSIGHTS (MATCHING UI DESIGN SCREENSHOT) -->
+  <section id="tab-climate" class="tab-panel">
+    <div class="climate-header-row">
+      <div>
+        <div class="app-subbrand">WEATHERGPT</div>
+        <h2 class="climate-main-title">Climate insights</h2>
+      </div>
+      <div class="climate-loc-wrapper">
+        <select id="climateLocSelect" class="climate-loc-select">
+          <option value="chennai">📍 Chennai ∨</option>
+          <option value="pallikaranai">📍 Pallikaranai ∨</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 2 TOP METRIC CARDS -->
+    <div class="climate-top-grid">
+      <div class="climate-metric-card">
+        <div class="metric-icon-box temp-fire">🔥</div>
+        <div class="metric-content">
+          <div id="climateTempStat" class="metric-val">+1.8°C</div>
+          <div class="metric-label">Avg temperature, 2016 – 2025</div>
+        </div>
+      </div>
+      <div class="climate-metric-card">
+        <div class="metric-icon-box rain-cloud">🌧️</div>
+        <div class="metric-content">
+          <div id="climateRainStat" class="metric-val">+44%</div>
+          <div class="metric-label">Annual rainfall change</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANNUAL RAINFALL BAR CHART -->
+    <div class="climate-chart-card">
+      <div class="chart-card-header">Annual rainfall (mm)</div>
+      <div class="chart-canvas-container">
+        <canvas id="rainfallChartCanvas" height="190"></canvas>
+        <div id="rainfallCSSFallback" class="css-chart-fallback hidden"></div>
+      </div>
+    </div>
+
+    <!-- AVERAGE TEMPERATURE LINE CHART -->
+    <div class="climate-chart-card">
+      <div class="chart-card-header">Average temperature (°C)</div>
+      <div class="chart-canvas-container">
+        <canvas id="tempChartCanvas" height="190"></canvas>
+        <div id="tempCSSFallback" class="css-chart-fallback hidden"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT-IF RISK SIMULATOR TAB -->
+  <section id="tab-simulate" class="tab-panel">
+    <div class="section-title-row">
+      <div><h2>What-If Risk Simulator</h2><p class="hint">Counterfactual weather hazard impact modeling</p></div>
+    </div>
+
+    <div class="simulator-card">
+      <div class="sim-row">
+        <label>🌧️ Target Rainfall: <b id="simRainVal">100 mm</b></label>
+        <input type="range" id="simRainSlider" min="0" max="250" value="100" step="5">
+      </div>
+      <div class="sim-row">
+        <label>💨 Wind Speed: <b id="simWindVal">45 km/h</b></label>
+        <input type="range" id="simWindSlider" min="10" max="130" value="45" step="5">
+      </div>
+      <button id="runSimBtn" class="sim-run-btn">⚡ Run Simulation</button>
+    </div>
+
+    <div id="simResultBox" class="sim-result-card hidden">
+      <h3>Simulation Output</h3>
+      <div class="sim-score-row">
+        <div><span>Baseline Risk:</span> <b id="simBaseScore">45/100</b></div>
+        <div><span>Simulated Risk:</span> <b id="simNewScore" class="warn-text">68/100</b></div>
+      </div>
+      <div id="simImpactDesc" class="sim-impact-text">High urban drainage load and storm risk predicted.</div>
+    </div>
+  </section>
+
 </main>
 
 <nav class="bottom-nav">
   <button class="nav-btn active" data-goto="tab-home">🏠<span>Home</span></button>
-  <button class="nav-btn" data-goto="tab-chat">🤖<span>AI Chat</span></button>
-  <button class="nav-btn" data-goto="tab-weather">🌤️<span>Weather</span></button>
-  <button class="nav-btn" data-goto="tab-radar">🌧️<span>Radar</span></button>
+  <button class="nav-btn" data-goto="tab-chat">💬<span>Ask</span></button>
+  <button class="nav-btn" data-goto="tab-simulate">⚡<span>Simulate</span></button>
   <button class="nav-btn" data-goto="tab-alerts">🚨<span>Alerts</span></button>
+  <button class="nav-btn" data-goto="tab-radar">🗺️<span>Map</span></button>
+  <button class="nav-btn" data-goto="tab-climate">📊<span>Climate</span></button>
 </nav>
 
 <!-- FLOATING AI CHAT WIDGET BUTTON -->

@@ -4,6 +4,9 @@ function showTab(id) {
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.goto === id));
   window.scrollTo({top: 0, behavior: "smooth"});
   setTimeout(() => window.dispatchEvent(new Event("resize")), 100);
+  if (id === "tab-climate") {
+    loadClimateInsights();
+  }
 }
 document.querySelectorAll("[data-goto]").forEach(el => el.addEventListener("click", () => showTab(el.dataset.goto)));
 
@@ -507,13 +510,178 @@ if(setLocSelect) setLocSelect.addEventListener("change",e=>{applyLocation(e.targ
 const setNotifBtn = document.getElementById("settingsNotif");
 if(setNotifBtn) setNotifBtn.addEventListener("click",()=>notifBtn.click());
 
+/* ===================== Climate Insights & Simulator ===================== */
+let rainfallChartInstance = null;
+let tempChartInstance = null;
+
+async function loadClimateInsights(city = "chennai") {
+  try {
+    const res = await fetch(`/api/climate?city=${city}`);
+    const data = await res.json();
+
+    if (data.temp_change_label) {
+      const el = document.getElementById("climateTempStat");
+      if (el) el.textContent = data.temp_change_label;
+    }
+    if (data.rain_change_label) {
+      const el = document.getElementById("climateRainStat");
+      if (el) el.textContent = data.rain_change_label;
+    }
+
+    const years = data.years || [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+    const rainData = data.annual_rainfall_series || [1210, 960, 1040, 890, 1290, 1640, 1410, 1520, 1590, 1740];
+    const tempData = data.avg_temp_series || [28.5, 28.7, 28.9, 29.4, 29.1, 29.3, 29.6, 29.8, 30.1, 30.3];
+
+    // Render Rainfall Bar Chart
+    const rainCanvas = document.getElementById("rainfallChartCanvas");
+    if (rainCanvas && typeof Chart !== "undefined") {
+      if (rainfallChartInstance) rainfallChartInstance.destroy();
+      const ctx = rainCanvas.getContext("2d");
+      rainfallChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: years,
+          datasets: [{
+            label: "Rainfall (mm)",
+            data: rainData,
+            backgroundColor: "#00b4d8",
+            hoverBackgroundColor: "#00e5ff",
+            borderRadius: 6,
+            barPercentage: 0.65
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `Rainfall: ${ctx.raw} mm`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: "#94a3b8", font: { size: 11, weight: "bold" } }
+            },
+            y: {
+              grid: { color: "rgba(255,255,255,0.06)" },
+              ticks: { color: "#64748b", font: { size: 10 } },
+              suggestedMax: 1800
+            }
+          }
+        }
+      });
+    }
+
+    // Render Temp Line Chart
+    const tempCanvas = document.getElementById("tempChartCanvas");
+    if (tempCanvas && typeof Chart !== "undefined") {
+      if (tempChartInstance) tempChartInstance.destroy();
+      const ctx = tempCanvas.getContext("2d");
+      tempChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: years,
+          datasets: [{
+            label: "Average Temp (°C)",
+            data: tempData,
+            borderColor: "#ff6b4a",
+            backgroundColor: "rgba(255, 107, 74, 0.15)",
+            pointBackgroundColor: "#ff6b4a",
+            pointBorderColor: "#ffffff",
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            borderWidth: 3,
+            tension: 0.35,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `Avg Temp: ${ctx.raw} °C`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: "#94a3b8", font: { size: 11, weight: "bold" } }
+            },
+            y: {
+              grid: { color: "rgba(255,255,255,0.06)" },
+              ticks: { color: "#64748b", font: { size: 10 } },
+              suggestedMin: 28.0,
+              suggestedMax: 31.0
+            }
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.error("[Climate Insights Error]", err);
+  }
+}
+
+// Climate Location Select Listener
+const climateLocSelect = document.getElementById("climateLocSelect");
+if (climateLocSelect) {
+  climateLocSelect.addEventListener("change", (e) => {
+    loadClimateInsights(e.target.value);
+  });
+}
+
+// Simulator Sliders & Button
+const simRainSlider = document.getElementById("simRainSlider");
+const simRainVal = document.getElementById("simRainVal");
+if (simRainSlider && simRainVal) {
+  simRainSlider.addEventListener("input", (e) => simRainVal.textContent = `${e.target.value} mm`);
+}
+
+const simWindSlider = document.getElementById("simWindSlider");
+const simWindVal = document.getElementById("simWindVal");
+if (simWindSlider && simWindVal) {
+  simWindSlider.addEventListener("input", (e) => simWindVal.textContent = `${e.target.value} km/h`);
+}
+
+const runSimBtn = document.getElementById("runSimBtn");
+if (runSimBtn) {
+  runSimBtn.addEventListener("click", async () => {
+    const rain = parseInt(simRainSlider ? simRainSlider.value : 100) || 100;
+    const wind = parseInt(simWindSlider ? simWindSlider.value : 45) || 45;
+    try {
+      const res = await fetch("/api/simulation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenario: { target_rainfall_mm: rain, wind_speed_change_percent: wind }
+        })
+      });
+      const data = await res.json();
+      document.getElementById("simResultBox")?.classList.remove("hidden");
+      document.getElementById("simBaseScore").textContent = `${data.baseline_risk || 45}/100`;
+      document.getElementById("simNewScore").textContent = `${data.simulated_risk || 68}/100`;
+      document.getElementById("simImpactDesc").textContent = `Risk Level: ${data.risk_level || "MEDIUM"}. ${rain > 120 ? "High urban drainage load and flooding advisory." : "Moderate precipitation & wind impact."}`;
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
 /* ===================== Boot ===================== */
 window.addEventListener("load",()=>{
   if(locSelect) locSelect.value=selectedLocation;
   if(setLocSelect) setLocSelect.value=selectedLocation;
   applyLocation(selectedLocation);
   initRainMap(); initLightningMap();
-  loadWeather(); loadRainFrames(); loadLightning(); loadAlerts(); loadNews(); computeRisk();
+  loadWeather(); loadRainFrames(); loadLightning(); loadAlerts(); loadNews(); computeRisk(); loadClimateInsights();
   setInterval(loadWeather, 10*60*1000);
   setInterval(loadLightning, 45*1000);
   setInterval(loadAlerts, 180*1000);
