@@ -16,7 +16,7 @@ An intelligent, multi-module weather intelligence platform connecting:
 
 1. **Install Dependencies**:
    ```bash
-   pip install fastapi uvicorn[standard] httpx websockets google-generativeai pydantic python-dotenv pytest
+   pip install -r requirements.txt
    ```
 
 2. **Start the Unified Server**:
