@@ -785,16 +785,11 @@ def _apply_memory_to_follow_up(
         return analysis
 
 
-# =============================================================
-# GREETING
-# =============================================================
+import re
 
-def _is_greeting(
-    message: str,
-) -> bool:
 
+def _is_greeting(message: str) -> bool:
     text = message.lower().strip()
-
     greetings = {
         "hello",
         "hi",
@@ -804,12 +799,21 @@ def _is_greeting(
         "good morning",
         "good afternoon",
         "good evening",
+        "வணக்கம்",
+        "நமஸ்காரம்",
+        "ஹலோ",
+        "ஹாய்",
     }
-
     return text in greetings
 
 
-def _greeting_response() -> str:
+def _greeting_response(language: str = "en") -> str:
+    if language == "ta":
+        return (
+            "வணக்கம்! 👋 நான் WeatherGPT. "
+            "தற்போதைய வானிலை, மழைக் கணிப்பு, வெப்பநிலை, "
+            "காற்றோட்டம், ஈரப்பதம் மற்றும் வரலாற்று வானிலை தகவல்களை நீங்கள் என்னிடம் கேட்கலாம்."
+        )
 
     return (
         "Hello! 👋 I'm WeatherGPT. "
@@ -826,66 +830,132 @@ def _greeting_response() -> str:
 def _generate_fallback_response(
     analysis: Any,
     weather_data: Optional[Dict[str, Any]],
+    language: str = "en",
+    user_message: str = "",
 ) -> str:
 
-    location = _get_location_name(
-        analysis
-    )
+    location = _get_location_name(analysis)
+    intent = _get_intent(analysis)
 
-    intent = _get_intent(
-        analysis
-    )
+    lang = language if language else _get_language(analysis)
+    if user_message and re.search(r"[\u0B80-\u0BFF]", user_message):
+        lang = "ta"
 
+    # Tamil specific formatting
+    if lang == "ta":
+        loc_str = f"{location}-இல்" if location else "உங்கள் பகுதியில்"
+
+        if not weather_data:
+            return f"{loc_str} தற்போதைய வானிலை தகவல் பெற முடியவில்லை."
+
+        if not isinstance(weather_data, dict):
+            return "வானிலை தரவு பெறப்பட்டது, ஆனால் அதை வடிவமைக்க முடியவில்லை."
+
+        temperature = weather_data.get("temperature", 28.0)
+        humidity = weather_data.get("humidity", 70.0)
+        rainfall = weather_data.get("rainfall_mm", 0.0)
+        wind = weather_data.get("wind_speed_kmh", 10.0)
+        condition = weather_data.get("condition", "Clear")
+        requested_date = weather_data.get("requested_date")
+
+        conditions_ta = {
+            "Clear": "தெளிவான வானம்",
+            "Sunny": "வெயில்",
+            "Partly Cloudy": "பகுதி மேகமூட்டம்",
+            "Cloudy": "மேகமூட்டம்",
+            "Overcast": "அடர்ந்த மேகமூட்டம்",
+            "Light Rain": "லேசான மழை",
+            "Moderate Rain": "மிதமான மழை",
+            "Heavy Rain": "கனமழை",
+            "Thunderstorm": "இடி மின்னலுடன் கூடிய மழை",
+            "Rain": "மழை",
+            "Drizzle": "தூறல்",
+            "Mist": "பனிமூட்டம்",
+            "Fog": "அடர்ந்த பனி"
+        }
+        cond_ta = conditions_ta.get(str(condition), str(condition))
+
+        if intent == "CURRENT_WEATHER":
+            return (
+                f"{loc_str} தற்போதைய வானிலை: {temperature}°C, {cond_ta}. "
+                f"ஈரப்பதம் {humidity}%, மழைப்பொழிவு {rainfall} mm, "
+                f"மற்றும் காற்று வேகம் {wind} km/h."
+            )
+
+        if intent == "RAIN_FORECAST":
+            period = f" ({requested_date})" if requested_date else ""
+            return (
+                f"{loc_str} மழை கணிப்பு{period}: {rainfall} mm மழைப்பொழிவு எதிர்பார்க்கப்படுகிறது. "
+                f"வானிலை நிலை: {cond_ta}."
+            )
+
+        if intent == "TEMPERATURE":
+            return f"{loc_str} தற்போதைய வெப்பநிலை {temperature}°C ஆகும்."
+
+        if intent == "WIND":
+            return f"{loc_str} காற்று வேகம் {wind} km/h ஆகும்."
+
+        if intent == "HUMIDITY":
+            return f"{loc_str} ஈரப்பதம் {humidity}% ஆகும்."
+
+        if intent in ["DAILY_FORECAST", "HOURLY_FORECAST"]:
+            period = f" ({requested_date})" if requested_date else ""
+            return (
+                f"{loc_str} வானிலை தகவல்{period}: {temperature}°C, {cond_ta}, "
+                f"ஈரப்பதம் {humidity}%, மழை {rainfall} mm, காற்று {wind} km/h."
+            )
+
+        if intent == "TRAVEL_WEATHER":
+            return (
+                f"{loc_str} பயணத்திற்கான வானிலை: {cond_ta}, வெப்பநிலை {temperature}°C, "
+                f"மழை {rainfall} mm, காற்று வேகம் {wind} km/h."
+            )
+
+        if intent == "OUTDOOR_ACTIVITY":
+            return (
+                f"{loc_str} வெளிப்புற செயல்பாடுகளுக்கு வானிலை நிலை {cond_ta}, "
+                f"வெப்பநிலை {temperature}°C, மழை {rainfall} mm."
+            )
+
+        if intent == "WEATHER_RISK":
+            return (
+                f"{loc_str} வானிலை அபாய நிலை: {cond_ta}, "
+                f"வெப்பநிலை {temperature}°C, மழை {rainfall} mm, காற்று வேகம் {wind} km/h."
+            )
+
+        if intent == "WHAT_IF_SCENARIO":
+            return (
+                f"{loc_str} வானிலை மாதிரி (What-If) பகுப்பாய்வு நிறைவடைந்தது."
+            )
+
+        if intent == "HISTORICAL_CLIMATE":
+            return (
+                f"{loc_str} வரலாற்று காலநிலை தகவல்கள் பெறப்பட்டன."
+            )
+
+        return (
+            f"{loc_str} வானிலை: {temperature}°C, {cond_ta}, "
+            f"ஈரப்பதம் {humidity}%, மழை {rainfall} mm, காற்று {wind} km/h."
+        )
+
+    # English Fallback
     if not location:
         location = "your location"
 
     if not weather_data:
+        return f"Weather information for {location} is currently unavailable."
 
-        return (
-            f"Weather information for "
-            f"{location} is currently unavailable."
-        )
+    if not isinstance(weather_data, dict):
+        return "Weather data was received, but I could not format it."
 
-    if not isinstance(
-        weather_data,
-        dict,
-    ):
-
-        return (
-            "Weather data was received, "
-            "but I could not format it."
-        )
-
-    temperature = weather_data.get(
-        "temperature"
-    )
-
-    humidity = weather_data.get(
-        "humidity"
-    )
-
-    rainfall = weather_data.get(
-        "rainfall_mm"
-    )
-
-    wind = weather_data.get(
-        "wind_speed_kmh"
-    )
-
-    condition = weather_data.get(
-        "condition"
-    )
-
-    requested_date = weather_data.get(
-        "requested_date"
-    )
-
-    # ---------------------------------------------------------
-    # Current
-    # ---------------------------------------------------------
+    temperature = weather_data.get("temperature")
+    humidity = weather_data.get("humidity")
+    rainfall = weather_data.get("rainfall_mm")
+    wind = weather_data.get("wind_speed_kmh")
+    condition = weather_data.get("condition")
+    requested_date = weather_data.get("requested_date")
 
     if intent == "CURRENT_WEATHER":
-
         return (
             f"Current weather in {location}: "
             f"{temperature}°C, {condition}. "
@@ -894,158 +964,58 @@ def _generate_fallback_response(
             f"and wind speed is {wind} km/h."
         )
 
-    # ---------------------------------------------------------
-    # Rain
-    # ---------------------------------------------------------
-
     if intent == "RAIN_FORECAST":
-
-        period = (
-            f" for {requested_date}"
-            if requested_date
-            else ""
-        )
-
+        period = f" for {requested_date}" if requested_date else ""
         return (
             f"Rain forecast for {location}{period}: "
             f"rainfall is {rainfall} mm "
-            f"with conditions reported as "
-            f"{condition}."
+            f"with conditions reported as {condition}."
         )
-
-    # ---------------------------------------------------------
-    # Temperature
-    # ---------------------------------------------------------
 
     if intent == "TEMPERATURE":
-
-        return (
-            f"The temperature in {location} "
-            f"is {temperature}°C."
-        )
-
-    # ---------------------------------------------------------
-    # Wind
-    # ---------------------------------------------------------
+        return f"The temperature in {location} is {temperature}°C."
 
     if intent == "WIND":
-
-        return (
-            f"Wind speed in {location} "
-            f"is {wind} km/h."
-        )
-
-    # ---------------------------------------------------------
-    # Humidity
-    # ---------------------------------------------------------
+        return f"Wind speed in {location} is {wind} km/h."
 
     if intent == "HUMIDITY":
+        return f"Humidity in {location} is {humidity}%."
 
+    if intent in ["DAILY_FORECAST", "HOURLY_FORECAST"]:
+        period = f" for {requested_date}" if requested_date else ""
         return (
-            f"Humidity in {location} "
-            f"is {humidity}%."
-        )
-
-    # ---------------------------------------------------------
-    # Daily
-    # ---------------------------------------------------------
-
-    if intent == "DAILY_FORECAST":
-
-        period = (
-            f" for {requested_date}"
-            if requested_date
-            else ""
-        )
-
-        return (
-            f"Daily weather information for "
-            f"{location}{period}: "
+            f"Daily weather information for {location}{period}: "
             f"{temperature}°C, {condition}, "
-            f"humidity {humidity}%, "
-            f"rainfall {rainfall} mm, "
-            f"wind {wind} km/h."
+            f"humidity {humidity}%, rainfall {rainfall} mm, wind {wind} km/h."
         )
-
-    # ---------------------------------------------------------
-    # Hourly
-    # ---------------------------------------------------------
-
-    if intent == "HOURLY_FORECAST":
-
-        return (
-            f"Hourly weather information for "
-            f"{location}: "
-            f"{temperature}°C, {condition}, "
-            f"humidity {humidity}%, "
-            f"rainfall {rainfall} mm, "
-            f"wind {wind} km/h."
-        )
-
-    # ---------------------------------------------------------
-    # Travel
-    # ---------------------------------------------------------
 
     if intent == "TRAVEL_WEATHER":
-
         return (
-            f"For travel to {location}, "
-            f"the available weather is "
-            f"{condition} with {temperature}°C, "
-            f"rainfall {rainfall} mm, "
-            f"and wind speed {wind} km/h."
+            f"For travel to {location}, the available weather is {condition} "
+            f"with {temperature}°C, rainfall {rainfall} mm, and wind speed {wind} km/h."
         )
-
-    # ---------------------------------------------------------
-    # Outdoor
-    # ---------------------------------------------------------
 
     if intent == "OUTDOOR_ACTIVITY":
-
         return (
-            f"For outdoor activities in {location}, "
-            f"the weather is currently {condition} "
-            f"at {temperature}°C with "
-            f"{rainfall} mm rainfall."
+            f"For outdoor activities in {location}, the weather is currently {condition} "
+            f"at {temperature}°C with {rainfall} mm rainfall."
         )
-
-    # ---------------------------------------------------------
-    # Risk
-    # ---------------------------------------------------------
 
     if intent == "WEATHER_RISK":
-
         return (
-            f"Weather risk information for "
-            f"{location} requires the Risk Engine. "
-            f"Current weather: {condition}, "
-            f"{temperature}°C, rainfall {rainfall} mm, "
-            f"wind {wind} km/h."
+            f"Weather risk information for {location} requires the Risk Engine. "
+            f"Current weather: {condition}, {temperature}°C, rainfall {rainfall} mm, wind {wind} km/h."
         )
-
-    # ---------------------------------------------------------
-    # What-If
-    # ---------------------------------------------------------
 
     if intent == "WHAT_IF_SCENARIO":
-
         return (
             f"What-If Weather Scenario Analysis for {location}:\n"
-            f"Counterfactual simulation completed against baseline weather data. "
-            f"Risk Engine evaluated urban drainage load, high wind impact, and emergency advisory triggers."
+            f"Counterfactual simulation completed against baseline weather data."
         )
 
-
-    # ---------------------------------------------------------
-    # Default
-    # ---------------------------------------------------------
-
     return (
-        f"Weather in {location}: "
-        f"{temperature}°C, {condition}, "
-        f"humidity {humidity}%, "
-        f"rainfall {rainfall} mm, "
-        f"wind {wind} km/h."
+        f"Weather in {location}: {temperature}°C, {condition}, "
+        f"humidity {humidity}%, rainfall {rainfall} mm, wind {wind} km/h."
     )
 
 
@@ -1065,9 +1035,11 @@ def _call_gemini(
     language: str = "en",
 ) -> str:
 
-    try:
-        lang = language if language else _get_language(analysis)
+    lang = language if language else _get_language(analysis)
+    if re.search(r"[\u0B80-\u0BFF]", message):
+        lang = "ta"
 
+    try:
         result = generate_response(
             user_message=message,
             analysis=analysis,
@@ -1086,8 +1058,10 @@ def _call_gemini(
         print(f"[Gemini Error] {error}")
 
     return _generate_fallback_response(
-        analysis,
-        weather_data,
+        analysis=analysis,
+        weather_data=weather_data,
+        language=lang,
+        user_message=message,
     )
 
 
@@ -1102,12 +1076,16 @@ def chat_response(
     language: str = "en",
 ) -> Dict[str, Any]:
 
+    # Detect Tamil script in message if present
+    if message and re.search(r"[\u0B80-\u0BFF]", message):
+        language = "ta"
+
     # =========================================================
     # 1. VALIDATE
     # =========================================================
 
     if not message or not message.strip():
-
+        resp_text = "தயவுசெய்து வானிலை பற்றிய கேள்வியை உள்ளிடவும்." if language == "ta" else "Please enter a weather-related question."
         return {
             "analysis": {
                 "message": "",
@@ -1121,8 +1099,7 @@ def chat_response(
                 "requires_risk_analysis": False,
                 "requires_simulation": False,
             },
-            "response":
-                "Please enter a weather-related question.",
+            "response": resp_text,
         }
 
     message = message.strip()
@@ -1150,8 +1127,7 @@ def chat_response(
                 "requires_risk_analysis": False,
                 "requires_simulation": False,
             },
-            "response":
-                _greeting_response(),
+            "response": _greeting_response(language=language),
         }
 
     # =========================================================
@@ -1297,7 +1273,17 @@ def chat_response(
     # =========================================================
 
     if analysis is None:
-
+        err_msg = (
+            "மன்னிக்கும், உங்கள் கோரிக்கையை என்னால் புரிந்து கொள்ள முடியவில்லை. "
+            "தயவுசெய்து வானிலை, மழை, வெப்பநிலை, காற்று அல்லது ஈரப்பதம் குறித்த கேள்விகளைக் கேட்கவும்."
+            if language == "ta" or re.search(r"[\u0B80-\u0BFF]", message)
+            else (
+                "I couldn't understand that request. "
+                "Please try asking about weather, "
+                "rain, temperature, wind, humidity, "
+                "travel, or a What-If scenario."
+            )
+        )
         return {
             "analysis": {
                 "message": message,
@@ -1311,12 +1297,7 @@ def chat_response(
                 "requires_risk_analysis": False,
                 "requires_simulation": False,
             },
-            "response": (
-                "I couldn't understand that request. "
-                "Please try asking about weather, "
-                "rain, temperature, wind, humidity, "
-                "travel, or a What-If scenario."
-            ),
+            "response": err_msg,
         }
 
     # =========================================================

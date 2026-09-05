@@ -96,6 +96,8 @@ def generate_response(
         raise RuntimeError("Gemini API client is not initialized or GEMINI_API_KEY is missing.")
 
     lang_code = language if language else (getattr(analysis, "language", "en") or "en")
+    if re.search(r"[\u0B80-\u0BFF]", user_message):
+        lang_code = "ta"
     lang_name = LANGUAGE_NAMES.get(lang_code, "English")
 
     prompt = f"""
