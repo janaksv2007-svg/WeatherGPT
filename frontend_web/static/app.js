@@ -654,7 +654,7 @@ if (climateLocSelect) {
   });
 }
 
-// Simulator Sliders & Button
+// Simulator Sliders & Presets
 const simRainSlider = document.getElementById("simRainSlider");
 const simRainVal = document.getElementById("simRainVal");
 if (simRainSlider && simRainVal) {
@@ -667,28 +667,107 @@ if (simWindSlider && simWindVal) {
   simWindSlider.addEventListener("input", (e) => simWindVal.textContent = `${e.target.value} km/h`);
 }
 
+const simTempSlider = document.getElementById("simTempSlider");
+const simTempVal = document.getElementById("simTempVal");
+if (simTempSlider && simTempVal) {
+  simTempSlider.addEventListener("input", (e) => simTempVal.textContent = `${e.target.value}°C`);
+}
+
+const simDurationSlider = document.getElementById("simDurationSlider");
+const simDurationVal = document.getElementById("simDurationVal");
+if (simDurationSlider && simDurationVal) {
+  simDurationSlider.addEventListener("input", (e) => simDurationVal.textContent = `${e.target.value} hours`);
+}
+
+// Preset Quick Buttons
+document.querySelectorAll(".sim-chip").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const preset = btn.dataset.preset;
+    if (preset === "flood") {
+      if (simRainSlider) { simRainSlider.value = 180; simRainVal.textContent = "180 mm"; }
+      if (simWindSlider) { simWindSlider.value = 60; simWindVal.textContent = "60 km/h"; }
+      if (simTempSlider) { simTempSlider.value = 28; simTempVal.textContent = "28°C"; }
+    } else if (preset === "cyclone") {
+      if (simRainSlider) { simRainSlider.value = 120; simRainVal.textContent = "120 mm"; }
+      if (simWindSlider) { simWindSlider.value = 95; simWindVal.textContent = "95 km/h"; }
+      if (simTempSlider) { simTempSlider.value = 27; simTempVal.textContent = "27°C"; }
+    } else if (preset === "heatwave") {
+      if (simRainSlider) { simRainSlider.value = 5; simRainVal.textContent = "5 mm"; }
+      if (simWindSlider) { simWindSlider.value = 20; simWindVal.textContent = "20 km/h"; }
+      if (simTempSlider) { simTempSlider.value = 42; simTempVal.textContent = "42°C"; }
+    } else if (preset === "squall") {
+      if (simRainSlider) { simRainSlider.value = 65; simRainVal.textContent = "65 mm"; }
+      if (simWindSlider) { simWindSlider.value = 75; simWindVal.textContent = "75 km/h"; }
+      if (simTempSlider) { simTempSlider.value = 29; simTempVal.textContent = "29°C"; }
+    }
+    runImpactAssessment();
+  });
+});
+
+async function runImpactAssessment() {
+  const rain = parseInt(simRainSlider ? simRainSlider.value : 100) || 100;
+  const wind = parseInt(simWindSlider ? simWindSlider.value : 45) || 45;
+  const temp = parseInt(simTempSlider ? simTempSlider.value : 32) || 32;
+  const duration = parseInt(simDurationSlider ? simDurationSlider.value : 6) || 6;
+
+  try {
+    const res = await fetch("/api/simulation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target_rainfall_mm: rain,
+        target_wind_speed_kmh: wind,
+        temperature_celsius: temp
+      })
+    });
+    const data = await res.json();
+
+    const baseScore = data.baseline_risk || 45;
+    const simScore = data.simulated_risk || data.simulated?.risk_score || Math.min(100, Math.round(rain * 0.35 + wind * 0.4 + (temp > 40 ? 25 : 0)));
+    const delta = simScore - baseScore;
+    const pct = Math.round((delta / Math.max(1, baseScore)) * 100);
+
+    const level = simScore >= 75 ? "EXTREME SEVERE" : simScore >= 60 ? "HIGH IMPACT" : simScore >= 40 ? "MODERATE" : "LOW";
+    const badgeClass = simScore >= 75 ? "risk-high" : simScore >= 60 ? "risk-high" : simScore >= 40 ? "risk-moderate" : "risk-low";
+
+    document.getElementById("simResultBox")?.classList.remove("hidden");
+    const badge = document.getElementById("simRiskBadge");
+    if (badge) {
+      badge.className = `sim-risk-badge ${badgeClass}`;
+      badge.textContent = `⚠️ Score: ${simScore}/100 — ${level}`;
+    }
+
+    document.getElementById("simBaseScore").textContent = `${baseScore} / 100`;
+    document.getElementById("simNewScore").textContent = `${simScore} / 100`;
+    document.getElementById("simDeltaScore").textContent = `${delta >= 0 ? "+" : ""}${delta} pts (${pct >= 0 ? "+" : ""}${pct}%)`;
+
+    // Calculate Inundation Depth (meters)
+    const depthMeters = (rain * 0.0055 * (duration / 6)).toFixed(2);
+    const inundationText = rain > 120 ? `Inundation Level: <b>${depthMeters} meters</b>. Severe waterlogging in subways (Perambur, Vyasarpadi, Mambalam) and canal banks.` : rain > 50 ? `Inundation Level: <b>${depthMeters} meters</b>. Moderate waterlogging in low-lying residential sectors.` : `Inundation Level: <b>Minor (<0.1m)</b>. Normal urban drainage flow.`;
+    document.getElementById("impactInundation").innerHTML = inundationText;
+
+    // Calculate Transport & Traffic Impact
+    const delayPct = Math.min(150, Math.round(rain * 0.6 + wind * 0.5));
+    const transportText = delayPct > 80 ? `Traffic Delay Index: <b>+${delayPct}% congestion</b>. Major delays / suspension expected on Suburban rail lines & arterial routes.` : `Traffic Delay Index: <b>+${delayPct}% congestion</b>. Slow-moving traffic on primary corridors.`;
+    document.getElementById("impactTransport").innerHTML = transportText;
+
+    // Calculate Power Grid & Wind Hazard
+    const gridOutageRisk = Math.min(95, Math.round(wind * 0.6 + rain * 0.2));
+    const gridText = wind > 60 ? `Outage Risk: <b>${gridOutageRisk}% probability</b>. High wind load on feeder cables, tree fall hazard & local substation trips.` : `Outage Risk: <b>${gridOutageRisk}% probability</b>. Normal electrical utility grid stability.`;
+    document.getElementById("impactGrid").innerHTML = gridText;
+
+    // Safety Advisory
+    const safetyText = simScore >= 70 ? `Avoid low-lying subways & flooded roads. Charge mobile devices, keep emergency kits ready, and follow official civic advisories.` : `Exercise caution during travel. Monitor live weather updates and alert notifications.`;
+    document.getElementById("impactSafety").innerHTML = safetyText;
+
+  } catch (e) {
+    console.error("[Impact Simulator Error]", e);
+  }
+}
+
 const runSimBtn = document.getElementById("runSimBtn");
 if (runSimBtn) {
-  runSimBtn.addEventListener("click", async () => {
-    const rain = parseInt(simRainSlider ? simRainSlider.value : 100) || 100;
-    const wind = parseInt(simWindSlider ? simWindSlider.value : 45) || 45;
-    try {
-      const res = await fetch("/api/simulation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenario: { target_rainfall_mm: rain, wind_speed_change_percent: wind }
-        })
-      });
-      const data = await res.json();
-      document.getElementById("simResultBox")?.classList.remove("hidden");
-      document.getElementById("simBaseScore").textContent = `${data.baseline_risk || 45}/100`;
-      document.getElementById("simNewScore").textContent = `${data.simulated_risk || 68}/100`;
-      document.getElementById("simImpactDesc").textContent = `Risk Level: ${data.risk_level || "MEDIUM"}. ${rain > 120 ? "High urban drainage load and flooding advisory." : "Moderate precipitation & wind impact."}`;
-    } catch (e) {
-      console.error(e);
-    }
-  });
+  runSimBtn.addEventListener("click", runImpactAssessment);
 }
 
 /* ===================== Boot ===================== */

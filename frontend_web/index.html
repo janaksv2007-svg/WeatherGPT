@@ -350,31 +350,95 @@
     </div>
   </section>
 
-  <!-- WHAT-IF RISK SIMULATOR TAB -->
+  <!-- WHAT-IF IMPACT SIMULATOR TAB -->
   <section id="tab-simulate" class="tab-panel">
     <div class="section-title-row">
-      <div><h2>What-If Risk Simulator</h2><p class="hint">Counterfactual weather hazard impact modeling</p></div>
+      <div>
+        <h2>⚡ Impact &amp; Scenario Simulator</h2>
+        <p class="hint">Model extreme weather hazards &amp; predict real-time urban, transport, power grid &amp; safety impacts</p>
+      </div>
     </div>
 
+    <!-- PRESET QUICK SCENARIO BUTTONS -->
+    <div class="sim-presets-title">Quick Scenario Presets</div>
+    <div class="sim-preset-chips">
+      <button class="sim-chip" data-preset="flood">🌧️ Extreme Flood (+180mm)</button>
+      <button class="sim-chip" data-preset="cyclone">🌀 Cyclone Mandous (95 km/h)</button>
+      <button class="sim-chip" data-preset="heatwave">☀️ Severe Heatwave (42°C)</button>
+      <button class="sim-chip" data-preset="squall">⚡ Monsoon Squall (70 km/h)</button>
+    </div>
+
+    <!-- PARAMETER CONTROL CARD -->
     <div class="simulator-card">
+      <div class="sim-card-title">🎮 Hazard Parameters</div>
+      
       <div class="sim-row">
-        <label>🌧️ Target Rainfall: <b id="simRainVal">100 mm</b></label>
-        <input type="range" id="simRainSlider" min="0" max="250" value="100" step="5">
+        <label>🌧️ Rainfall Amount: <b id="simRainVal">100 mm</b></label>
+        <input type="range" id="simRainSlider" min="0" max="300" value="100" step="5">
       </div>
+
       <div class="sim-row">
-        <label>💨 Wind Speed: <b id="simWindVal">45 km/h</b></label>
-        <input type="range" id="simWindSlider" min="10" max="130" value="45" step="5">
+        <label>💨 Sustained Wind Speed: <b id="simWindVal">45 km/h</b></label>
+        <input type="range" id="simWindSlider" min="5" max="150" value="45" step="5">
       </div>
-      <button id="runSimBtn" class="sim-run-btn">⚡ Run Simulation</button>
+
+      <div class="sim-row">
+        <label>🌡️ Temperature: <b id="simTempVal">32°C</b></label>
+        <input type="range" id="simTempSlider" min="15" max="48" value="32" step="1">
+      </div>
+
+      <div class="sim-row">
+        <label>⏱️ Storm Duration: <b id="simDurationVal">6 hours</b></label>
+        <input type="range" id="simDurationSlider" min="1" max="24" value="6" step="1">
+      </div>
+
+      <button id="runSimBtn" class="sim-run-btn">⚡ Run Impact Assessment</button>
     </div>
 
-    <div id="simResultBox" class="sim-result-card hidden">
-      <h3>Simulation Output</h3>
-      <div class="sim-score-row">
-        <div><span>Baseline Risk:</span> <b id="simBaseScore">45/100</b></div>
-        <div><span>Simulated Risk:</span> <b id="simNewScore" class="warn-text">68/100</b></div>
+    <!-- MULTI-SECTOR IMPACT OUTPUT -->
+    <div id="simResultBox" class="sim-result-card">
+      <div class="sim-output-header">
+        <div class="sim-overall-title">PREDICTED IMPACT ANALYSIS</div>
+        <div id="simRiskBadge" class="sim-risk-badge risk-high">⚠️ Score: 68/100 — HIGH IMPACT</div>
       </div>
-      <div id="simImpactDesc" class="sim-impact-text">High urban drainage load and storm risk predicted.</div>
+
+      <div class="sim-metrics-grid">
+        <div class="sim-metric-item">
+          <span>Baseline Risk</span>
+          <b id="simBaseScore">45 / 100</b>
+        </div>
+        <div class="sim-metric-item">
+          <span>Simulated Risk</span>
+          <b id="simNewScore" class="warn-text">68 / 100</b>
+        </div>
+        <div class="sim-metric-item">
+          <span>Risk Escalation</span>
+          <b id="simDeltaScore">+23 pts (+51%)</b>
+        </div>
+      </div>
+
+      <!-- SECTOR BREAKDOWN CARDS -->
+      <div class="impact-sector-grid">
+        <div class="impact-card">
+          <div class="impact-header"><span>🌊</span> <b>Road &amp; Urban Drainage</b></div>
+          <div id="impactInundation" class="impact-detail">Inundation Level: <b>0.45 meters</b> in low-lying subways. Waterlogging expected in Perambur &amp; Mambalam.</div>
+        </div>
+
+        <div class="impact-card">
+          <div class="impact-header"><span>🚆</span> <b>Transport &amp; Traffic Flow</b></div>
+          <div id="impactTransport" class="impact-detail">Traffic Delay Index: <b>+85% congestion</b>. Delays expected on Suburban rail &amp; arterial roads.</div>
+        </div>
+
+        <div class="impact-card">
+          <div class="impact-header"><span>⚡</span> <b>Power Grid &amp; Infrastructure</b></div>
+          <div id="impactGrid" class="impact-detail">Outage Risk: <b>35% probability</b>. High wind load on utility lines &amp; tree fall hazard.</div>
+        </div>
+
+        <div class="impact-card">
+          <div class="impact-header"><span>🛡️</span> <b>Public Safety Advisory</b></div>
+          <div id="impactSafety" class="impact-detail">Avoid subways and low-lying roads. Charge mobile devices and store drinking water.</div>
+        </div>
+      </div>
     </div>
   </section>
 
