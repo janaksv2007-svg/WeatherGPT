@@ -117,7 +117,10 @@ def chat(request: ChatRequest):
             condition=weather_data.get("condition", "Clear")
         )
 
+    climate_info = raw_result.get("climate")
     sim_info = raw_result.get("simulation_data")
+    if not risk_info:
+        risk_info = raw_result.get("risk")
 
     return {
         "success": True,
@@ -127,9 +130,11 @@ def chat(request: ChatRequest):
         "weather": weather_data,
         "risk": risk_info,
         "simulation": sim_info,
+        "climate": climate_info,
         "alerts": [],
         "response": raw_result.get("response", "")
     }
+
 
 
 @app.post("/analyze")
