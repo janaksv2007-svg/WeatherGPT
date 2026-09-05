@@ -3,8 +3,37 @@ import httpx
 LAT, LON = 13.0827, 80.2707
 
 async def get_weather(location="chennai"):
-    coords = {"chennai": (13.0827,80.2707), "pallikaranai": (12.9345,80.2145)}
-    lat, lon = coords.get(location, coords["chennai"])
+    loc_key = (location or "chennai").strip().lower()
+    coords = {
+        "chennai": (13.0827, 80.2707),
+        "coimbatore": (11.0168, 76.9558),
+        "madurai": (9.9252, 78.1198),
+        "trichy": (10.7905, 78.7047),
+        "tiruchirappalli": (10.7905, 78.7047),
+        "salem": (11.6643, 78.1460),
+        "tirunelveli": (8.7139, 77.7567),
+        "pallikaranai": (12.9345, 80.2145),
+        "vellore": (12.9165, 79.1325),
+        "thanjavur": (10.7870, 79.1378),
+        "kanyakumari": (8.0883, 77.5385),
+        "bengaluru": (12.9716, 77.5946),
+        "bangalore": (12.9716, 77.5946),
+        "mumbai": (19.0760, 72.8777),
+        "delhi": (28.6139, 77.2090),
+    }
+
+    if loc_key in coords:
+        lat, lon = coords[loc_key]
+    else:
+        try:
+            from app.location.resolver import resolve_city
+            res = resolve_city(loc_key)
+            if res and "latitude" in res and "longitude" in res:
+                lat, lon = res["latitude"], res["longitude"]
+            else:
+                lat, lon = coords["chennai"]
+        except Exception:
+            lat, lon = coords["chennai"]
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": lat, "longitude": lon,

@@ -16,7 +16,20 @@
     <span class="brand-text">WeatherGPT</span>
   </div>
   <div class="header-actions">
-    <select id="locationSelect" class="location-select" aria-label="Select location"><option value="chennai">📍 Chennai</option><option value="pallikaranai">📍 Pallikaranai</option></select>
+    <select id="locationSelect" class="location-select" aria-label="Select location">
+  <option value="chennai">📍 Chennai</option>
+  <option value="coimbatore">📍 Coimbatore</option>
+  <option value="madurai">📍 Madurai</option>
+  <option value="trichy">📍 Tiruchirappalli</option>
+  <option value="salem">📍 Salem</option>
+  <option value="tirunelveli">📍 Tirunelveli</option>
+  <option value="vellore">📍 Vellore</option>
+  <option value="thanjavur">📍 Thanjavur</option>
+  <option value="pallikaranai">📍 Pallikaranai</option>
+  <option value="bengaluru">📍 Bengaluru</option>
+  <option value="mumbai">📍 Mumbai</option>
+  <option value="delhi">📍 Delhi</option>
+</select>
     <span id="lastUpdated" class="last-updated">Live</span>
     <button id="notifBtn" class="notif-btn" title="Enable alert notifications">🔔 Enable Alerts</button>
   </div>
@@ -237,7 +250,20 @@
   <section id="tab-settings" class="tab-panel">
     <div class="section-title-row"><div><h2>App Settings</h2><p class="hint">Make WeatherGPT work the way you want</p></div></div>
     <div class="settings-card">
-      <div class="setting-row"><div><b>📍 Default location</b><small>Choose the place shown on Home</small></div><select id="settingsLocation"><option value="chennai">Chennai</option><option value="pallikaranai">Pallikaranai</option></select></div>
+      <div class="setting-row"><div><b>📍 Default location</b><small>Choose the place shown on Home</small></div><select id="settingsLocation" class="location-select">
+        <option value="chennai">Chennai</option>
+        <option value="coimbatore">Coimbatore</option>
+        <option value="madurai">Madurai</option>
+        <option value="trichy">Tiruchirappalli</option>
+        <option value="salem">Salem</option>
+        <option value="tirunelveli">Tirunelveli</option>
+        <option value="vellore">Vellore</option>
+        <option value="thanjavur">Thanjavur</option>
+        <option value="pallikaranai">Pallikaranai</option>
+        <option value="bengaluru">Bengaluru</option>
+        <option value="mumbai">Mumbai</option>
+        <option value="delhi">Delhi</option>
+      </select></div>
       <div class="setting-row"><div><b>🔔 Weather alerts</b><small>Browser notifications for important warnings</small></div><button id="settingsNotif" class="toggle-btn">Enable</button></div>
       <div class="setting-row"><div><b>🔄 Auto refresh</b><small>Keep weather and alerts up to date</small></div><button id="settingsRefresh" class="toggle-btn on">On</button></div>
     </div>
@@ -272,7 +298,17 @@
       <div class="climate-loc-wrapper">
         <select id="climateLocSelect" class="climate-loc-select">
           <option value="chennai">📍 Chennai</option>
+          <option value="coimbatore">📍 Coimbatore</option>
+          <option value="madurai">📍 Madurai</option>
+          <option value="trichy">📍 Tiruchirappalli</option>
+          <option value="salem">📍 Salem</option>
+          <option value="tirunelveli">📍 Tirunelveli</option>
+          <option value="vellore">📍 Vellore</option>
+          <option value="thanjavur">📍 Thanjavur</option>
           <option value="pallikaranai">📍 Pallikaranai</option>
+          <option value="bengaluru">📍 Bengaluru</option>
+          <option value="mumbai">📍 Mumbai</option>
+          <option value="delhi">📍 Delhi</option>
         </select>
       </div>
     </div>

@@ -215,16 +215,32 @@ function showToast(message, level = "info") {
 const notifBtn = document.getElementById("notifBtn");
 const locations = {
   chennai: {name:"Chennai", lat:13.0827, lon:80.2707},
-  pallikaranai: {name:"Pallikaranai", lat:12.9345, lon:80.2145}
+  coimbatore: {name:"Coimbatore", lat:11.0168, lon:76.9558},
+  madurai: {name:"Madurai", lat:9.9252, lon:78.1198},
+  trichy: {name:"Tiruchirappalli", lat:10.7905, lon:78.7047},
+  salem: {name:"Salem", lat:11.6643, lon:78.1460},
+  tirunelveli: {name:"Tirunelveli", lat:8.7139, lon:77.7567},
+  vellore: {name:"Vellore", lat:12.9165, lon:79.1325},
+  thanjavur: {name:"Thanjavur", lat:10.7870, lon:79.1378},
+  pallikaranai: {name:"Pallikaranai", lat:12.9345, lon:80.2145},
+  bengaluru: {name:"Bengaluru", lat:12.9716, lon:77.5946},
+  mumbai: {name:"Mumbai", lat:19.0760, lon:72.8777},
+  delhi: {name:"Delhi", lat:28.6139, lon:77.2090}
 };
 let selectedLocation = localStorage.getItem("weathergpt_location") || "chennai";
+
 function applyLocation(loc){
-  selectedLocation=loc; localStorage.setItem("weathergpt_location",loc);
-  const l=locations[loc];
-  document.getElementById("locationSelect").value=loc;
-  document.getElementById("settingsLocation").value=loc;
-  document.querySelector(".hero-card h1").textContent=l.name;
-  loadWeather(); loadLightning(); loadAlerts();
+  if (!locations[loc]) loc = "chennai";
+  selectedLocation = loc;
+  localStorage.setItem("weathergpt_location", loc);
+  const l = locations[loc];
+  ["locationSelect", "settingsLocation", "climateLocSelect"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = loc;
+  });
+  const heroH1 = document.querySelector(".hero-card h1");
+  if (heroH1) heroH1.textContent = l.name;
+  loadWeather(); loadLightning(); loadAlerts(); loadClimateInsights(loc);
 }
 
 function refreshNotifBtn() {
