@@ -32,7 +32,19 @@ KNOWN_LOCATIONS = [
     "Salem",
     "Mysore",
     "Mysuru",
+    "Pallikaranai",
+    # Tamil script location names
+    "சென்னை",
+    "சென்னைக்கு",
+    "சென்னையில்",
+    "பள்ளிக்கரணை",
+    "மதுரை",
+    "கோயம்புத்தூர்",
+    "கோவை",
+    "திருச்சி",
+    "சேலம்",
 ]
+
 
 
 # ============================================================
@@ -636,6 +648,30 @@ def detect_intent(message: str) -> str:
         return "OUTDOOR_ACTIVITY"
 
     # ========================================================
+    # HISTORICAL CLIMATE
+    # ========================================================
+
+    if any(
+        kw in text
+        for kw in [
+            "historic",
+            "historical",
+            "climate",
+            "trend",
+            "past years",
+            "past weather",
+            "history",
+            "climate trends",
+            "average rainfall",
+            "records",
+            "வரலாறு",
+            "வரலாற்று",
+            "கடந்த கால",
+        ]
+    ):
+        return "HISTORICAL_CLIMATE"
+
+    # ========================================================
     # COMPARISON
     # ========================================================
 
@@ -653,13 +689,20 @@ def detect_intent(message: str) -> str:
     # WHAT-IF
     # ========================================================
 
-    if (
-        "what if" in text
-        or "suppose" in text
-        or "if rainfall" in text
-        or "if rain" in text
-        or "if wind speed" in text
-        or "if wind" in text
+    if any(
+        kw in text
+        for kw in [
+            "what if",
+            "suppose",
+            "if rainfall",
+            "if rain",
+            "if wind speed",
+            "if wind",
+            "simulate",
+            "simulation",
+            "scenario",
+            "modelling",
+        ]
     ):
 
         return "WHAT_IF_SCENARIO"
@@ -691,13 +734,21 @@ def detect_intent(message: str) -> str:
         word in text
         for word in [
             "risk",
+            "risk score",
+            "hazard",
             "flood",
             "flooding",
             "dangerous",
             "danger",
             "safe",
+            "warning level",
+            "ஆபத்து",
+            "பாதுகாப்பு",
         ]
     ):
+
+        return "WEATHER_RISK"
+
 
         return "WEATHER_RISK"
 

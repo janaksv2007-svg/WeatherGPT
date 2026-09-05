@@ -86,6 +86,8 @@ def generate_response(
     risk_data: Optional[dict] = None,
     simulation_data: Optional[dict] = None,
     comparison_weather: Optional[dict] = None,
+    climate_data: Optional[dict] = None,
+    language: str = "en",
 ) -> str:
     """
     Generate conversational answer using Gemini LLM.
@@ -93,11 +95,17 @@ def generate_response(
     if model is None:
         raise RuntimeError("Gemini API client is not initialized or GEMINI_API_KEY is missing.")
 
+    lang_code = language if language else (getattr(analysis, "language", "en") or "en")
+    lang_name = LANGUAGE_NAMES.get(lang_code, "English")
+
     prompt = f"""
 {RESPONSE_SYSTEM_PROMPT}
 
 USER MESSAGE:
 {user_message}
+
+TARGET RESPONSE LANGUAGE:
+{lang_name} ({lang_code})
 
 STRUCTURED ANALYSIS:
 {analysis}
@@ -114,7 +122,11 @@ RISK DATA:
 SIMULATION DATA:
 {simulation_data}
 
-Answer the user's question directly, clearly and concisely in natural language using the provided data.
+HISTORICAL CLIMATE DATA:
+{climate_data}
+
+Answer the user's question directly, clearly and concisely using the provided data.
+IMPORTANT: If TARGET RESPONSE LANGUAGE is Tamil ('ta') or Tamil script is detected, write the entire response in natural Tamil script (தமிழ்).
 """
     try:
         response = model.generate_content(prompt)

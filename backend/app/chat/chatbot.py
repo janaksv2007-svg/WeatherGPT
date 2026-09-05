@@ -1060,9 +1060,13 @@ def _call_gemini(
     session_id: str,
     comparison_weather: Optional[Dict[str, Any]] = None,
     simulation_data: Optional[Dict[str, Any]] = None,
+    risk_data: Optional[Dict[str, Any]] = None,
+    climate_data: Optional[Dict[str, Any]] = None,
+    language: str = "en",
 ) -> str:
 
     try:
+        lang = language if language else _get_language(analysis)
 
         result = generate_response(
             user_message=message,
@@ -1070,24 +1074,22 @@ def _call_gemini(
             weather_data=weather_data,
             comparison_weather=comparison_weather,
             simulation_data=simulation_data,
+            risk_data=risk_data,
+            climate_data=climate_data,
+            language=lang,
         )
 
         if result:
-
-            return str(
-                result
-            ).strip()
+            return str(result).strip()
 
     except Exception as error:
-
-        print(
-            f"[Gemini Error] {error}"
-        )
+        print(f"[Gemini Error] {error}")
 
     return _generate_fallback_response(
         analysis,
         weather_data,
     )
+
 
 
 # =============================================================
@@ -1507,91 +1509,38 @@ def chat_response(
     # 10.5 WHAT-IF SIMULATION
     # =========================================================
 
+    # Ensure weather_data is fetched if requires_weather OR if WHAT_IF / RISK / HISTORICAL
+    if not weather_data and (intent in ["WHAT_IF_SCENARIO", "WEATHER_RISK", "HISTORICAL_CLIMATE"] or location_name):
+        try:
+            target_city = location_name or "Chennai"
+            weather_data = get_weather(city=target_city, time_info=time_info, intent=intent)
+        except Exception:
+            pass
+
+    # =========================================================
+    # 10.5 WHAT-IF SIMULATION
+    # =========================================================
+
     simulation_data = None
 
-    if (
-        intent == "WHAT_IF_SCENARIO"
-        and weather_data
-    ):
-
+    if intent == "WHAT_IF_SCENARIO":
         try:
-
-            if isinstance(
-                analysis,
-                dict,
-            ):
-
-                parameters = analysis.get(
-                    "parameters"
-                )
-
+            if isinstance(analysis, dict):
+                parameters = analysis.get("parameters")
             else:
-
-                parameters = getattr(
-                    analysis,
-                    "parameters",
-                    None,
-                )
+                parameters = getattr(analysis, "parameters", None)
 
             if parameters is None:
                 parameters = {}
 
-            if isinstance(
-                parameters,
-                dict,
-            ):
-
-                rainfall_change = parameters.get(
-                    "rainfall_change_mm"
-                )
-
-                wind_speed = parameters.get(
-                    "wind_speed_kmh"
-                )
-
-                target_rainfall = parameters.get(
-                    "target_rainfall_mm"
-                )
-
+            if isinstance(parameters, dict):
+                rainfall_change = parameters.get("rainfall_change_mm")
+                wind_speed = parameters.get("wind_speed_kmh")
+                target_rainfall = parameters.get("target_rainfall_mm")
             else:
-
-                rainfall_change = getattr(
-                    parameters,
-                    "rainfall_change_mm",
-                    None,
-                )
-
-                wind_speed = getattr(
-                    parameters,
-                    "wind_speed_kmh",
-                    None,
-                )
-
-                target_rainfall = getattr(
-                    parameters,
-                    "target_rainfall_mm",
-                    None,
-                )
-
-            print(
-                "[Simulation] Parameters:",
-                parameters,
-            )
-
-            print(
-                "[Simulation] Rainfall change:",
-                rainfall_change,
-            )
-
-            print(
-                "[Simulation] Target rainfall:",
-                target_rainfall,
-            )
-
-            print(
-                "[Simulation] Wind speed:",
-                wind_speed,
-            )
+                rainfall_change = getattr(parameters, "rainfall_change_mm", None)
+                wind_speed = getattr(parameters, "wind_speed_kmh", None)
+                target_rainfall = getattr(parameters, "target_rainfall_mm", None)
 
             from app.services.simulation_engine import simulate_scenario
 
@@ -1602,7 +1551,7 @@ def chat_response(
             }
 
             sim_res = simulate_scenario(
-                baseline_weather=weather_data or {},
+                baseline_weather=weather_data or {"temperature": 29.0, "rainfall_mm": 45.0, "wind_speed_kmh": 22.0, "condition": "Heavy Rain"},
                 scenario=scenario_params
             )
 
@@ -1615,77 +1564,60 @@ def chat_response(
                 "details": sim_res
             }
 
-            print(
-                "[Simulation] Member 3 simulation computed successfully:",
-                simulation_data,
-            )
-
+            print("[Simulation] Member 3 simulation computed successfully:", simulation_data)
 
         except Exception as error:
-
-            print(
-                f"[Simulation Error] "
-                f"{error}"
-            )
-
+            print(f"[Simulation Error] {error}")
             simulation_data = None
+
+    # =========================================================
+    # 10.6 RISK ENGINE CALCULATION
+    # =========================================================
+
+    risk_data = None
+    if intent == "WEATHER_RISK" or (weather_data and getattr(analysis, "requires_risk_analysis", False)):
+        try:
+            from app.services.risk_engine import calculate_risk
+            w = weather_data or {}
+            risk_data = calculate_risk(
+                temperature=w.get("temperature", 28.0),
+                humidity=w.get("humidity", 70.0),
+                rainfall_mm=w.get("rainfall_mm", 0.0),
+                wind_speed_kmh=w.get("wind_speed_kmh", 10.0),
+                condition=w.get("condition", "Clear")
+            )
+        except Exception as err:
+            print(f"[Risk Engine Error] {err}")
+
+    # =========================================================
+    # 10.7 HISTORICAL CLIMATE TRENDS
+    # =========================================================
+
+    climate_data = None
+    if intent == "HISTORICAL_CLIMATE":
+        try:
+            from app.services.historical import get_historical_climate
+            target_city = location_name or "chennai"
+            climate_data = get_historical_climate(target_city)
+        except Exception as err:
+            print(f"[Historical Service Error] {err}")
 
     # =========================================================
     # 11. COMPARISON
     # =========================================================
 
-    comparison_name = (
-        _get_comparison_location_name(
-            analysis
-        )
-    )
-
+    comparison_name = _get_comparison_location_name(analysis)
     comparison_weather = None
 
     if comparison_name:
-
         try:
-
             comparison_weather = get_weather(
                 city=comparison_name,
                 time_info=time_info,
                 intent=intent,
             )
-
-            print(
-                "[Comparison Weather] "
-                f"Retrieved data for "
-                f"{comparison_name}"
-            )
-
-        except TypeError:
-
-            try:
-
-                comparison_weather = get_weather(
-                    city=comparison_name,
-                    time_info=time_info,
-                )
-
-            except TypeError:
-
-                comparison_weather = get_weather(
-                    comparison_name
-                )
-
-            except Exception as error:
-
-                print(
-                    f"[Comparison Weather Error] "
-                    f"{error}"
-                )
-
         except Exception as error:
-
-            print(
-                f"[Comparison Weather Error] "
-                f"{error}"
-            )
+            print(f"[Comparison Weather Error] {error}")
 
     # =========================================================
     # 12. SAVE MEMORY
@@ -1708,6 +1640,9 @@ def chat_response(
         session_id=session_id,
         comparison_weather=comparison_weather,
         simulation_data=simulation_data,
+        risk_data=risk_data,
+        climate_data=climate_data,
+        language=language,
     )
 
     # =========================================================
@@ -1715,33 +1650,27 @@ def chat_response(
     # =========================================================
 
     result = {
-        "analysis":
-            _analysis_to_dict(
-                analysis
-            ),
-        "response":
-            response,
+        "analysis": _analysis_to_dict(analysis),
+        "response": response,
     }
 
     if weather_data is not None:
-
-        result[
-            "weather_data"
-        ] = weather_data
+        result["weather_data"] = weather_data
 
     if comparison_weather is not None:
-
-        result[
-            "comparison_weather_data"
-        ] = comparison_weather
+        result["comparison_weather_data"] = comparison_weather
 
     if simulation_data is not None:
+        result["simulation_data"] = simulation_data
 
-        result[
-            "simulation_data"
-        ] = simulation_data
+    if risk_data is not None:
+        result["risk"] = risk_data
+
+    if climate_data is not None:
+        result["climate"] = climate_data
 
     return result
+
 
 
 # =============================================================

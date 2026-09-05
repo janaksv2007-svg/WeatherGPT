@@ -113,6 +113,16 @@ async function sendChatMessage(promptText) {
         </div>`;
     }
 
+    if (data.climate) {
+      const c = data.climate;
+      extraHTML += `
+        <div style="margin-top:10px;background:#070d19;border:1px solid #334155;padding:12px;border-radius:14px;font-size:0.76rem;">
+          <div style="font-weight:800;color:var(--sky);margin-bottom:4px;">📊 Historical Climate Trends (${c.city || "Chennai"})</div>
+          <div>Annual Rainfall Average: <b>${c.annual_rainfall_avg_mm} mm</b></div>
+          <div style="margin-top:4px;color:var(--muted);">Extreme events recorded: ${c.extreme_events ? c.extreme_events.length : 0} historical occurrences</div>
+        </div>`;
+    }
+
     if (data.weather) {
       const w = data.weather;
       extraHTML += `
@@ -121,6 +131,7 @@ async function sendChatMessage(promptText) {
           <span>💧 ${w.humidity}% | 💨 ${w.wind_speed_kmh} km/h</span>
         </div>`;
     }
+
 
     appendChatBubble("ai", replyHTML + extraHTML, null, rawReply);
   } catch (err) {

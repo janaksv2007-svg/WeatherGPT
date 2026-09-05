@@ -104,3 +104,40 @@ def test_anomalies_api():
     data = response.json()
     assert "is_anomaly" in data
     assert data["is_anomaly"] is True
+
+
+def test_tamil_chatbot():
+    response = client.post(
+        "/chat",
+        json={"message": "சென்னையில் இன்று மழை பெய்யுமா?", "session_id": "test-tamil", "language": "ta"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "response" in data
+    assert data["analysis"]["language"] == "ta"
+
+
+def test_simulation_chatbot():
+    response = client.post(
+        "/chat",
+        json={"message": "What if rainfall increases to 100 mm in Chennai?", "session_id": "test-sim"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "simulation" in data
+    assert data["simulation"]["simulated_risk"] > 0
+
+
+def test_historical_climate_chatbot():
+    response = client.post(
+        "/chat",
+        json={"message": "What are the historical climate trends for Chennai?", "session_id": "test-climate"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "climate" in data
+    assert "annual_rainfall_avg_mm" in data["climate"]
+

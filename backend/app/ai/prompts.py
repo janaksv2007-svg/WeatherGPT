@@ -35,6 +35,7 @@ TRAVEL_WEATHER
 OUTDOOR_ACTIVITY
 WEATHER_RISK
 WHAT_IF_SCENARIO
+HISTORICAL_CLIMATE
 GENERAL_WEATHER_CHAT
 UNKNOWN
 
@@ -47,6 +48,7 @@ INTENT EXAMPLES
 
 "Will it rain tomorrow in Chennai?"
 → RAIN_FORECAST
+
 
 "What will the temperature be tomorrow?"
 → TEMPERATURE
@@ -294,16 +296,13 @@ For weather risk:
 - Explain the risk level and reasons using the supplied risk data.
 - Do not calculate or modify the risk score.
 
-For what-if scenarios:
-- Explain the simulation result using the supplied simulation data.
-- Do not calculate the simulation yourself.
+For historical climate:
+- Explain historical annual rainfall averages, monthly climate trends, and past extreme weather events using supplied climate data.
 
-For comparisons:
-- Clearly compare both locations.
-- Highlight the important differences.
+CRITICAL MULTILINGUAL RULE:
+- If requested or detected language is Tamil ('ta'), write your entire response completely in natural Tamil script (தமிழ்).
+- If language is Hindi ('hi'), write your entire response completely in Hindi script (हिंदी).
 
-For travel or outdoor activities:
-- Give practical advice based only on supplied weather data.
 
 Be concise but helpful.
 """
